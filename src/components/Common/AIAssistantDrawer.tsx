@@ -5,9 +5,7 @@ import {
   Cpu, 
   Zap, 
   ShieldCheck, 
-  FileText, 
-  RotateCcw,
-  Sparkles
+  FileText
 } from 'lucide-react';
 import { askOpenRouterAssistant } from '../../services/aiService';
 import { useApp } from '../../context/AppContext';
@@ -24,8 +22,8 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
     {
       sender: 'ai',
-      text: 'Modulo de analisis predictivo y telemetria activo. Modelo configurado via OpenRouter para analisis de redes electricas y planificacion de carga segun norma NB 777 (Bolivia). Ingrese un comando o consulta tecnica.',
-      time: '00:00'
+      text: 'Predictive Telemetry & AI Grid Assistant online. Powered by OpenRouter Gemini 2.0 Flash for electrical power analysis, trip consumption modeling, and safe earthing guidelines. Enter an engineering prompt below.',
+      time: '12:00 PM'
     }
   ]);
 
@@ -39,7 +37,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
     setInputPrompt('');
     setLoading(true);
 
-    const context = `Puntos de carga activos en red: ${chargers.length}. Sesion actual: ${activeBooking ? activeBooking.chargerTitle + ' a ' + activeBooking.activeSession?.flowRateKw + ' kW' : 'Ninguna'}. Moneda: Bolivianos (Bs.).`;
+    const context = `Active grid charging stations: ${chargers.length}. Current live session: ${activeBooking ? activeBooking.chargerTitle + ' at ' + activeBooking.activeSession?.flowRateKw + ' kW' : 'None'}.`;
 
     const reply = await askOpenRouterAssistant(prompt, context);
     const aiMsg = { sender: 'ai' as const, text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
@@ -48,31 +46,31 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
   };
 
   const samplePrompts = [
-    'Calcular autonomia y paradas de recarga La Paz - Cochabamba (Bateria 60 kWh)',
-    'Parametros de seguridad electrica y puesta a tierra para cargador trifasico 22kW',
-    'Analizar tarifa optima en Bs./kWh considerando costo industrial ENDE'
+    'Calculate charging stops and battery consumption for a 150-mile road trip (75 kWh battery)',
+    'Review Level 2 commercial circuit breaker & grounding safety requirements',
+    'Evaluate optimal per-kWh rate with 15% host margin and equipment depreciation'
   ];
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-[#1E1E1E] border-l border-[#2C2C2E] shadow-2xl flex flex-col justify-between">
+    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-white border-l border-[#BAE6FD] shadow-2xl flex flex-col justify-between font-sans">
       
       {/* Header */}
-      <div className="p-4 border-b border-[#2C2C2E] flex items-center justify-between bg-[#18181A]">
+      <div className="p-4 border-b border-[#BAE6FD] flex items-center justify-between bg-[#F0F9FF]">
         <div>
           <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-[#00E5FF]" />
-            <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-              Asistente de Telemetria (OpenRouter AI)
+            <Cpu className="w-4 h-4 text-[#0284C7]" />
+            <span className="text-xs font-mono font-bold text-[#0F172A] uppercase tracking-wider">
+              AI Telemetry & Trip Advisor
             </span>
           </div>
-          <span className="text-[10px] font-mono text-[#32D74B] block mt-0.5">
-            [ONLINE] Gemini 2.0 Flash / Analitica Electrica
+          <span className="text-[10px] font-mono text-[#16A34A] font-bold block mt-0.5">
+            [ONLINE] OpenRouter Gemini 2.0 Flash / Energy AI
           </span>
         </div>
 
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-full bg-[#121212] border border-[#2C2C2E] flex items-center justify-center text-[#98989D] hover:text-white"
+          className="w-8 h-8 rounded-full bg-white border border-[#CBD5E1] flex items-center justify-center text-[#64748B] hover:text-[#0F172A] shadow-xs"
         >
           <X className="w-4 h-4" />
         </button>
@@ -85,14 +83,14 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
             key={idx}
             className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
           >
-            <div className="text-[10px] font-mono text-[#98989D] mb-1">
-              {m.sender === 'user' ? 'OPERADOR' : 'IA WATT-VISION'} • {m.time}
+            <div className="text-[10px] font-mono text-[#64748B] mb-1 font-bold">
+              {m.sender === 'user' ? 'OPERATOR' : 'EVIO AI'} • {m.time}
             </div>
             <div
-              className={`p-3.5 rounded-xl text-xs leading-relaxed max-w-[92%] whitespace-pre-wrap ${
+              className={`p-3.5 rounded-xl text-xs leading-relaxed max-w-[92%] whitespace-pre-wrap shadow-xs ${
                 m.sender === 'user'
-                  ? 'bg-[#00E5FF] text-black font-medium'
-                  : 'bg-[#121212] text-white border border-[#2C2C2E]'
+                  ? 'bg-[#0284C7] text-white font-medium'
+                  : 'bg-[#F8FAFC] text-[#0F172A] border border-[#E2E8F0]'
               }`}
             >
               {m.text}
@@ -101,23 +99,23 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
         ))}
 
         {loading && (
-          <div className="p-3 rounded-xl bg-[#121212] border border-[#2C2C2E] text-xs text-[#00E5FF] font-mono flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#00E5FF] animate-ping"></span>
-            <span>Consultando modelo en OpenRouter...</span>
+          <div className="p-3 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] text-xs text-[#0284C7] font-mono flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#0284C7] animate-ping"></span>
+            <span>Querying OpenRouter neural model...</span>
           </div>
         )}
       </div>
 
       {/* Suggested prompts & Input */}
-      <div className="p-4 border-t border-[#2C2C2E] bg-[#18181A] space-y-3">
+      <div className="p-4 border-t border-[#BAE6FD] bg-[#F8FAFC] space-y-3">
         <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase text-[#98989D] block">Consultas Tecnicas Predefinidas:</span>
+          <span className="text-[10px] font-mono uppercase text-[#64748B] font-bold block">Pre-Engineered Prompts:</span>
           {samplePrompts.map((p, i) => (
             <button
               key={i}
               onClick={() => handleSend(p)}
               disabled={loading}
-              className="w-full text-left p-2 rounded-lg bg-[#121212] border border-[#2C2C2E] hover:border-[#00E5FF]/40 text-[11px] text-[#98989D] hover:text-white transition-colors truncate block"
+              className="w-full text-left p-2 rounded-lg bg-white border border-[#CBD5E1] hover:border-[#0284C7] text-[11px] text-[#475569] hover:text-[#0284C7] transition-colors truncate block shadow-xs"
             >
               &gt; {p}
             </button>
@@ -133,16 +131,16 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
         >
           <input
             type="text"
-            placeholder="Ingrese parametro o consulta tecnica..."
+            placeholder="Ask AI technical question..."
             value={inputPrompt}
             onChange={e => setInputPrompt(e.target.value)}
             disabled={loading}
-            className="flex-1 px-3.5 py-2.5 bg-[#121212] border border-[#2C2C2E] rounded-xl text-xs text-white placeholder-[#98989D] focus:outline-none focus:border-[#00E5FF]"
+            className="flex-1 px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#0284C7] shadow-xs"
           />
           <button
             type="submit"
             disabled={loading || !inputPrompt.trim()}
-            className="p-2.5 bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black rounded-xl font-bold disabled:opacity-40"
+            className="p-2.5 bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-xl font-bold disabled:opacity-40 shadow-xs"
           >
             <Send className="w-4 h-4" />
           </button>

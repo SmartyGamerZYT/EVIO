@@ -31,7 +31,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white flex flex-col font-sans selection:bg-[#00E5FF] selection:text-black">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans selection:bg-[#BAE6FD] selection:text-[#0369A1]">
       
       {/* Top Navigation */}
       <Navbar
@@ -115,22 +115,22 @@ const MainApp: React.FC = () => {
       )}
 
       {/* Technical Footer (DESIGN.md: Technical tone & reliability) */}
-      <footer className="border-t border-[#2C2C2E] bg-[#18181A] py-5 px-4 sm:px-8 mt-12 text-xs text-[#98989D] font-mono">
+      <footer className="border-t border-[#BAE6FD] bg-white py-5 px-4 sm:px-8 mt-12 text-xs text-[#64748B] font-mono">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-[#00E5FF]/10 text-[#00E5FF] flex items-center justify-center font-bold">
-              <Zap className="w-3 h-3 fill-[#00E5FF]" />
+            <div className="w-5 h-5 rounded bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center font-bold">
+              <Zap className="w-3 h-3 fill-[#0284C7] text-[#0284C7]" />
             </div>
-            <span className="font-bold text-white tracking-wider">WATT-VISION TELEMETRY v1.0</span>
-            <span className="hidden md:inline text-[#98989D]">• Red Electrica Descentralizada</span>
+            <span className="font-bold text-[#0F172A] tracking-wider">EVIO TELEMETRY v1.0</span>
+            <span className="hidden md:inline text-[#64748B]">• Decentralized EV Charging Grid</span>
           </div>
 
           <div className="flex items-center gap-6 text-[11px]">
-            <span className="flex items-center gap-1.5 text-[#32D74B]">
+            <span className="flex items-center gap-1.5 text-[#16A34A]">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Conformidad NB 777 Verificada</span>
+              <span>Electrical Safety Certified</span>
             </span>
-            <span>Sistema Dark Mode (WattVision DESIGN.md)</span>
+            <span className="text-[#0284C7] font-semibold">White & Sky Blue Grid</span>
           </div>
         </div>
       </footer>

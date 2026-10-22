@@ -21,8 +21,8 @@ export const DriverView: React.FC<DriverViewProps> = ({
   const [selectedCharger, setSelectedCharger] = useState<ChargerListing | null>(null);
   const [bookingModalCharger, setBookingModalCharger] = useState<ChargerListing | null>(null);
 
-  // Center on La Paz, Bolivia as specified in DESIGN.md section 1
-  const [userCoords, setUserCoords] = useState<[number, number]>([-16.5000, -68.1500]);
+  // Default coordinate center
+  const [userCoords, setUserCoords] = useState<[number, number]>([37.7749, -122.4194]);
 
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
@@ -43,8 +43,7 @@ export const DriverView: React.FC<DriverViewProps> = ({
           setUserCoords([pos.coords.latitude, pos.coords.longitude]);
         },
         () => {
-          // Default to central La Paz
-          setUserCoords([-16.5000, -68.1500]);
+          setUserCoords([37.7749, -122.4194]);
         }
       );
     }
@@ -112,24 +111,24 @@ export const DriverView: React.FC<DriverViewProps> = ({
           {/* Left Column: 4-Cols Scrollable Results List */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-4 max-h-[700px] overflow-y-auto pr-1">
             {filteredChargers.length === 0 ? (
-              <div className="bg-[#1E1E1E] border border-[#2C2C2E] rounded-card p-8 text-center text-xs text-[#98989D] space-y-3 font-mono">
-                <AlertCircle className="w-8 h-8 text-[#00E5FF] mx-auto opacity-70" />
-                <p className="font-semibold text-white">0 Nodos Registrados en Este Radio</p>
+              <div className="bg-white border border-[#BAE6FD] rounded-card p-8 text-center text-xs text-[#64748B] space-y-3 font-mono shadow-sm">
+                <AlertCircle className="w-8 h-8 text-[#0284C7] mx-auto opacity-70" />
+                <p className="font-bold text-[#0F172A] text-sm">0 Stations Active in Radius</p>
                 <p className="font-sans text-[11px] leading-relaxed">
-                  No hay cargadores activos en la base de datos local para los filtros seleccionados. Puede registrar un nuevo terminal o cargar estaciones de calibracion de Bolivia.
+                  No chargers found for current filter parameters. List a new private charger or load calibration stations to test the grid.
                 </p>
                 <div className="pt-2 flex flex-col gap-2">
                   <button
                     onClick={onOpenListingWizard}
-                    className="w-full py-2.5 rounded-xl bg-[#00E5FF] text-black font-bold text-xs"
+                    className="w-full py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs shadow-xs"
                   >
-                    Registrar Mi Cargador
+                    List My Charger
                   </button>
                   <button
                     onClick={loadSeedChargers}
-                    className="w-full py-2 rounded-xl bg-[#121212] border border-[#2C2C2E] hover:border-[#00E5FF] text-white text-xs"
+                    className="w-full py-2 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] hover:border-[#0284C7] text-[#0284C7] font-bold text-xs"
                   >
-                    Cargar Nodos de Calibracion (La Paz)
+                    Load Demo Stations
                   </button>
                 </div>
               </div>
@@ -163,8 +162,8 @@ export const DriverView: React.FC<DriverViewProps> = ({
         /* List View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredChargers.length === 0 ? (
-            <div className="col-span-3 bg-[#1E1E1E] border border-[#2C2C2E] rounded-card p-12 text-center text-xs text-[#98989D] font-mono">
-              0 Nodos de recarga registrados.
+            <div className="col-span-3 bg-white border border-[#BAE6FD] rounded-card p-12 text-center text-xs text-[#64748B] font-mono shadow-sm">
+              0 charging stations registered.
             </div>
           ) : (
             filteredChargers.map(charger => (
