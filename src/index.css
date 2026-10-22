@@ -29,10 +29,12 @@
   background: #94A3B8;
 }
 
-/* Leaflet light theme adjustments */
+/* Leaflet light theme adjustments & stacking context isolation */
 .leaflet-container {
   background-color: #F0F9FF !important;
   font-family: 'Inter', sans-serif !important;
+  isolation: isolate;
+  z-index: 1 !important;
 }
 
 .leaflet-popup-content-wrapper {

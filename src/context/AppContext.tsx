@@ -14,9 +14,13 @@ export type Currency = 'USD' | 'EUR' | 'INR' | 'GBP';
 interface AppContextType {
   currentUser: UserProfile | null;
   loginUser: (user: UserProfile) => void;
+  loginWithCredentials: (email: string, password: string) => { success: boolean; error?: string; user?: UserProfile };
+  registerAccount: (account: UserProfile) => { success: boolean; error?: string };
   logoutUser: () => void;
   role: UserRole;
   switchRole: (role: UserRole) => void;
+  userCoords: [number, number];
+  setUserCoords: (coords: [number, number]) => void;
   currency: Currency;
   setCurrency: (c: Currency) => void;
   formatCurrency: (amount: number) => string;
@@ -48,14 +52,105 @@ interface AppContextType {
   markNotificationsAsRead: () => void;
 }
 
+const DEFAULT_ACCOUNTS: UserProfile[] = [
+  {
+    id: 'usr-driver-demo',
+    name: 'Sarah Jenkins (Driver)',
+    email: 'driver@evio.com',
+    password: 'driver123',
+    phone: '+1 555-0192',
+    role: 'driver',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    isVerified: true,
+    walletBalance: 85.0,
+    vehicle: {
+      make: 'Tesla',
+      model: 'Model Y Long Range',
+      batteryCapacity: 75.0,
+      connector: 'CCS-2',
+      plateNumber: 'EV-7829',
+    }
+  },
+  {
+    id: 'usr-hub-demo',
+    name: 'Marcus Vance (Hub Host)',
+    email: 'hub@evio.com',
+    password: 'hub123',
+    phone: '+1 555-0144',
+    role: 'hub',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+    isVerified: true,
+    walletBalance: 420.0,
+  },
+  {
+    id: 'usr-supervisor-demo',
+    name: 'Elena Rostova (Grid Supervisor)',
+    email: 'supervisor@evio.com',
+    password: 'super123',
+    phone: '+1 555-0199',
+    role: 'supervisor',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+    isVerified: true,
+    walletBalance: 0,
+  },
+  // Unified ID accounts for testing:
+  // "id can be same for all dashboard but the password created during registration for specific dashboard will decide on which dashboard it should drop"
+  {
+    id: 'usr-multi-driver',
+    name: 'Alex Demo (Driver)',
+    email: 'demo@evio.com',
+    password: 'driver123',
+    phone: '+1 555-9001',
+    role: 'driver',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    isVerified: true,
+    walletBalance: 120.0,
+    vehicle: {
+      make: 'Hyundai',
+      model: 'Ioniq 5',
+      batteryCapacity: 77.4,
+      connector: 'CCS-2',
+      plateNumber: 'IO-9921',
+    }
+  },
+  {
+    id: 'usr-multi-hub',
+    name: 'Alex Demo (Hub Host)',
+    email: 'demo@evio.com',
+    password: 'hub123',
+    phone: '+1 555-9002',
+    role: 'hub',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    isVerified: true,
+    walletBalance: 650.0,
+  },
+  {
+    id: 'usr-multi-supervisor',
+    name: 'Alex Demo (Supervisor)',
+    email: 'demo@evio.com',
+    password: 'super123',
+    phone: '+1 555-9003',
+    role: 'supervisor',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    isVerified: true,
+    walletBalance: 0,
+  }
+];
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [registeredAccounts, setRegisteredAccounts] = useState<UserProfile[]>(() => {
+    const saved = localStorage.getItem('evio_accounts');
+    return saved ? JSON.parse(saved) : DEFAULT_ACCOUNTS;
+  });
+
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('evio_current_user');
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [userCoords, setUserCoords] = useState<[number, number]>([37.7749, -122.4194]);
   const [currency, setCurrency] = useState<Currency>('USD');
 
   const [chargers, setChargers] = useState<ChargerListing[]>(() => {
@@ -75,6 +170,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; desc: string; time: string; read: boolean }>>([]);
+
+  useEffect(() => {
+    localStorage.setItem('evio_accounts', JSON.stringify(registeredAccounts));
+  }, [registeredAccounts]);
 
   useEffect(() => {
     if (currentUser) {
@@ -106,6 +205,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       ...prev
     ]);
+  };
+
+  // Password-based dashboard routing: ID can be the same, but password created during registration decides the dashboard
+  const loginWithCredentials = (emailInput: string, passwordInput: string) => {
+    const trimmedEmail = emailInput.trim().toLowerCase();
+    const match = registeredAccounts.find(
+      acc => acc.email.trim().toLowerCase() === trimmedEmail && acc.password === passwordInput
+    );
+
+    if (match) {
+      setCurrentUser(match);
+      setNotifications(prev => [
+        {
+          id: `notif-${Date.now()}`,
+          title: `${match.role.toUpperCase()} Authentication Successful`,
+          desc: `Redirected to ${match.role.toUpperCase()} Dashboard as ${match.name}.`,
+          time: 'Just now',
+          read: false,
+        },
+        ...prev
+      ]);
+      return { success: true, user: match };
+    }
+
+    return { 
+      success: false, 
+      error: 'Invalid credentials. No account found for this ID and Password combination. Register or verify your credentials.' 
+    };
+  };
+
+  const registerAccount = (account: UserProfile) => {
+    // Check if an account with same email AND same password already exists
+    const existing = registeredAccounts.find(
+      a => a.email.toLowerCase() === account.email.toLowerCase() && a.password === account.password
+    );
+
+    if (existing) {
+      return { 
+        success: false, 
+        error: 'An account with this ID and password already exists. Please choose a different password for this dashboard.' 
+      };
+    }
+
+    const updated = [account, ...registeredAccounts];
+    setRegisteredAccounts(updated);
+    setCurrentUser(account);
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Account Registered',
+        desc: `New ${account.role.toUpperCase()} account created for ${account.name}. Dashboard initialized.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+
+    return { success: true };
   };
 
   const logoutUser = () => {
@@ -381,9 +539,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         loginUser,
+        loginWithCredentials,
+        registerAccount,
         logoutUser,
         role,
         switchRole,
+        userCoords,
+        setUserCoords,
         currency,
         setCurrency,
         formatCurrency,

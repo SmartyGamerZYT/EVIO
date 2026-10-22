@@ -31,8 +31,8 @@ interface DiscoveryFiltersProps {
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   onLocateMe: () => void;
+  isLocating?: boolean;
   totalResults: number;
-  onOpenListingWizard: () => void;
 }
 
 const ALL_CONNECTORS: ConnectorType[] = ['Type 2', 'CCS-2', 'GB/T', 'CHAdeMO', 'Type 1'];
@@ -41,8 +41,8 @@ export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
   filters,
   setFilters,
   onLocateMe,
+  isLocating = false,
   totalResults,
-  onOpenListingWizard,
 }) => {
   const { loadSeedChargers, clearAllChargers, chargers } = useApp();
 
@@ -105,20 +105,16 @@ export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
         {/* Current Location GPS */}
         <button
           onClick={onLocateMe}
-          className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#0284C7] hover:bg-[#F0F9FF] text-xs font-mono font-bold text-[#475569] hover:text-[#0284C7] transition-all whitespace-nowrap shadow-xs"
-          title="Detect GPS coordinates"
+          disabled={isLocating}
+          className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-mono font-bold transition-all whitespace-nowrap shadow-xs ${
+            isLocating 
+              ? 'bg-[#E0F2FE] border-[#0284C7] text-[#0284C7]' 
+              : 'bg-white border-[#CBD5E1] hover:border-[#0284C7] hover:bg-[#F0F9FF] text-[#475569] hover:text-[#0284C7]'
+          }`}
+          title="Detect GPS coordinates & center map"
         >
-          <Navigation className="w-3.5 h-3.5 text-[#0284C7]" />
-          <span>Locate Me</span>
-        </button>
-
-        {/* Register Station CTA */}
-        <button
-          onClick={onOpenListingWizard}
-          className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold font-mono transition-all whitespace-nowrap shadow-sm shadow-[#0284C7]/20"
-        >
-          <PlusCircle className="w-3.5 h-3.5" />
-          <span>List Charger</span>
+          <Navigation className={`w-3.5 h-3.5 text-[#0284C7] ${isLocating ? 'animate-spin' : ''}`} />
+          <span>{isLocating ? 'Acquiring GPS...' : 'Locate Me'}</span>
         </button>
 
         {/* View mode toggle */}

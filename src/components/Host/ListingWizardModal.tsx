@@ -25,7 +25,7 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
   const totalSteps = 7;
 
   const [photos, setPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1558441719-798481498b3f?w=800',
+    'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800',
     'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800',
   ]);
   const [photoInput, setPhotoInput] = useState('');
@@ -141,7 +141,7 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
       <div className="bg-white border border-[#BAE6FD] rounded-card w-full max-w-2xl max-h-[92vh] overflow-y-auto p-6 shadow-2xl relative my-auto">
         
         {/* Close Button */}

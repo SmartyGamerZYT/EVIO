@@ -33,7 +33,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
       <div className="bg-white border border-[#BAE6FD] rounded-card w-full max-w-md p-6 shadow-2xl relative">
         
         {/* Close Button */}

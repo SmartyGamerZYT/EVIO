@@ -9,20 +9,34 @@ import { Database, PlusCircle, AlertCircle } from 'lucide-react';
 
 interface DriverViewProps {
   onOpenActiveSession: () => void;
-  onOpenListingWizard: () => void;
 }
 
 export const DriverView: React.FC<DriverViewProps> = ({ 
   onOpenActiveSession,
-  onOpenListingWizard,
 }) => {
-  const { chargers, loadSeedChargers } = useApp();
+  const { chargers, loadSeedChargers, userCoords, setUserCoords } = useApp();
 
   const [selectedCharger, setSelectedCharger] = useState<ChargerListing | null>(null);
   const [bookingModalCharger, setBookingModalCharger] = useState<ChargerListing | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
 
-  // Default coordinate center
-  const [userCoords, setUserCoords] = useState<[number, number]>([37.7749, -122.4194]);
+  // Auto-detect location on dashboard mount so the map drops a pin right at user's location
+  React.useEffect(() => {
+    if ('geolocation' in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          setUserCoords([pos.coords.latitude, pos.coords.longitude]);
+          setIsLocating(false);
+        },
+        () => {
+          // Fallback location
+          setIsLocating(false);
+        },
+        { timeout: 8000 }
+      );
+    }
+  }, []);
 
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
@@ -38,14 +52,20 @@ export const DriverView: React.FC<DriverViewProps> = ({
 
   const handleLocateMe = () => {
     if ('geolocation' in navigator) {
+      setIsLocating(true);
       navigator.geolocation.getCurrentPosition(
         pos => {
           setUserCoords([pos.coords.latitude, pos.coords.longitude]);
+          setIsLocating(false);
         },
-        () => {
-          setUserCoords([37.7749, -122.4194]);
-        }
+        err => {
+          setIsLocating(false);
+          alert('Could not acquire GPS coordinates. Please ensure location permissions are enabled in your browser.');
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
       );
+    } else {
+      alert('Geolocation is not supported by your browser.');
     }
   };
 
@@ -100,8 +120,8 @@ export const DriverView: React.FC<DriverViewProps> = ({
         filters={filters}
         setFilters={setFilters}
         onLocateMe={handleLocateMe}
+        isLocating={isLocating}
         totalResults={filteredChargers.length}
-        onOpenListingWizard={onOpenListingWizard}
       />
 
       {/* Main Content: Map or Grid */}
@@ -115,18 +135,12 @@ export const DriverView: React.FC<DriverViewProps> = ({
                 <AlertCircle className="w-8 h-8 text-[#0284C7] mx-auto opacity-70" />
                 <p className="font-bold text-[#0F172A] text-sm">0 Stations Active in Radius</p>
                 <p className="font-sans text-[11px] leading-relaxed">
-                  No chargers found for current filter parameters. List a new private charger or load calibration stations to test the grid.
+                  No verified chargers found for current search filters. You can load calibration grid stations to preview live bookings and map pins.
                 </p>
                 <div className="pt-2 flex flex-col gap-2">
                   <button
-                    onClick={onOpenListingWizard}
-                    className="w-full py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs shadow-xs"
-                  >
-                    List My Charger
-                  </button>
-                  <button
                     onClick={loadSeedChargers}
-                    className="w-full py-2 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] hover:border-[#0284C7] text-[#0284C7] font-bold text-xs"
+                    className="w-full py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs shadow-xs"
                   >
                     Load Demo Stations
                   </button>

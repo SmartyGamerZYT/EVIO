@@ -6,7 +6,7 @@ import { DriverView } from './components/Driver/DriverView';
 import { MyBookingsView } from './components/Driver/MyBookingsView';
 import { HostDashboard } from './components/Host/HostDashboard';
 import { ListingWizardModal } from './components/Host/ListingWizardModal';
-import { AdminPanel } from './components/Admin/AdminPanel';
+import { SupervisorDashboard } from './components/Supervisor/SupervisorDashboard';
 import { ActiveSessionModal } from './components/Driver/ActiveSessionModal';
 import { WalletModal } from './components/Common/WalletModal';
 import { ReceiptModal } from './components/Common/ReceiptModal';
@@ -25,7 +25,20 @@ const MainApp: React.FC = () => {
   const [showChatDrawer, setShowChatDrawer] = useState(false);
   const [showAIDrawer, setShowAIDrawer] = useState(false);
 
-  // If no user is logged in, show the AuthScreen (PRD Section 1.4: "1. User lands on the Login / Sign-up page.")
+  // Automatically sync initial tab when logging into specific role dashboard
+  React.useEffect(() => {
+    if (role === 'driver') {
+      if (currentTab !== 'driver' && currentTab !== 'bookings') {
+        setCurrentTab('driver');
+      }
+    } else if (role === 'hub') {
+      setCurrentTab('host');
+    } else if (role === 'supervisor') {
+      setCurrentTab('admin');
+    }
+  }, [role]);
+
+  // If no user is logged in, show the AuthScreen
   if (!currentUser) {
     return <AuthScreen />;
   }
@@ -45,29 +58,34 @@ const MainApp: React.FC = () => {
 
       {/* Main Body View */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {currentTab === 'driver' && (
-          <DriverView 
-            onOpenActiveSession={() => setShowActiveSession(true)} 
-            onOpenListingWizard={() => setShowListingWizard(true)}
-          />
+        
+        {/* DRIVER DASHBOARD */}
+        {role === 'driver' && (
+          <>
+            {currentTab === 'bookings' ? (
+              <MyBookingsView
+                onOpenActiveSession={() => setShowActiveSession(true)}
+                onOpenReceipt={() => setShowReceiptModal(true)}
+                onOpenChat={() => setShowChatDrawer(true)}
+              />
+            ) : (
+              <DriverView 
+                onOpenActiveSession={() => setShowActiveSession(true)} 
+              />
+            )}
+          </>
         )}
 
-        {currentTab === 'bookings' && (
-          <MyBookingsView
-            onOpenActiveSession={() => setShowActiveSession(true)}
-            onOpenReceipt={() => setShowReceiptModal(true)}
-            onOpenChat={() => setShowChatDrawer(true)}
-          />
-        )}
-
-        {currentTab === 'host' && (
+        {/* HUB (HOST) DASHBOARD */}
+        {role === 'hub' && (
           <HostDashboard
             onOpenListingWizard={() => setShowListingWizard(true)}
           />
         )}
 
-        {currentTab === 'admin' && (
-          <AdminPanel />
+        {/* SUPERVISOR DASHBOARD */}
+        {role === 'supervisor' && (
+          <SupervisorDashboard />
         )}
       </main>
 
@@ -77,7 +95,7 @@ const MainApp: React.FC = () => {
           onClose={() => setShowListingWizard(false)}
           onSuccess={() => {
             setShowListingWizard(false);
-            setCurrentTab('admin');
+            setCurrentTab('host');
           }}
         />
       )}

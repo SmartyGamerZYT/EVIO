@@ -1,4 +1,4 @@
-export type UserRole = 'driver' | 'host' | 'admin';
+export type UserRole = 'driver' | 'hub' | 'supervisor';
 
 export type ConnectorType = 'Type 2' | 'CCS-2' | 'GB/T' | 'Type 1' | 'CHAdeMO';
 
@@ -16,6 +16,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  password?: string;
   phone: string;
   role: UserRole;
   avatar: string;

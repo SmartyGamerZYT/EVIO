@@ -85,7 +85,7 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
       <div className="bg-white border border-[#BAE6FD] rounded-card w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl relative my-auto">
         
         {/* Close Button */}

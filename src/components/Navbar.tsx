@@ -75,64 +75,55 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Role-Specific Navigation Tabs */}
           <nav className="hidden md:flex items-center gap-1 bg-[#F8FAFC] p-1 rounded-xl border border-[#E2E8F0]">
-            <button
-              onClick={() => {
-                setCurrentTab('driver');
-                if (role !== 'driver') switchRole('driver');
-              }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                currentTab === 'driver' 
-                  ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
-                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
-              }`}
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Find Chargers</span>
-            </button>
+            {role === 'driver' && (
+              <>
+                <button
+                  onClick={() => setCurrentTab('driver')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    currentTab === 'driver' 
+                      ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Find Chargers</span>
+                </button>
 
-            <button
-              onClick={() => setCurrentTab('bookings')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                currentTab === 'bookings' 
-                  ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
-                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
-              }`}
-            >
-              <Car className="w-3.5 h-3.5" />
-              <span>My Sessions</span>
-            </button>
+                <button
+                  onClick={() => setCurrentTab('bookings')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    currentTab === 'bookings' 
+                      ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
+                  }`}
+                >
+                  <Car className="w-3.5 h-3.5" />
+                  <span>My Sessions</span>
+                </button>
+              </>
+            )}
 
-            <button
-              onClick={() => {
-                setCurrentTab('host');
-                if (role !== 'host') switchRole('host');
-              }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                currentTab === 'host' 
-                  ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
-                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Host Hub</span>
-            </button>
+            {role === 'hub' && (
+              <button
+                onClick={() => setCurrentTab('host')}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#16A34A] text-white shadow-sm"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Hub Stations & Telemetry</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => {
-                setCurrentTab('admin');
-                if (role !== 'admin') switchRole('admin');
-              }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                currentTab === 'admin' 
-                  ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
-                  : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Supervisor</span>
-            </button>
+            {role === 'supervisor' && (
+              <button
+                onClick={() => setCurrentTab('admin')}
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0284C7] text-white shadow-sm"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Supervisor Safety Operations</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -275,46 +266,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <p className="text-[11px] text-[#64748B] font-mono">{currentUser.email}</p>
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="px-2 text-[10px] font-mono font-bold text-[#64748B] uppercase tracking-wider block">
-                      Switch Perspective
-                    </span>
-                    
-                    <button
-                      onClick={() => {
-                        switchRole('driver');
-                        setCurrentTab('driver');
-                        setShowUserMenu(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between hover:bg-[#F0F9FF] ${role === 'driver' ? 'text-[#0284C7] font-bold bg-[#E0F2FE]' : 'text-[#475569]'}`}
-                    >
-                      <span>Driver (Map & Booking)</span>
-                      {role === 'driver' && <CheckCircle2 className="w-3.5 h-3.5 text-[#0284C7]" />}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        switchRole('host');
-                        setCurrentTab('host');
-                        setShowUserMenu(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between hover:bg-[#F0F9FF] ${role === 'host' ? 'text-[#0284C7] font-bold bg-[#E0F2FE]' : 'text-[#475569]'}`}
-                    >
-                      <span>Host Hub (Station Telemetry)</span>
-                      {role === 'host' && <CheckCircle2 className="w-3.5 h-3.5 text-[#0284C7]" />}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        switchRole('admin');
-                        setCurrentTab('admin');
-                        setShowUserMenu(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between hover:bg-[#F0F9FF] ${role === 'admin' ? 'text-[#0284C7] font-bold bg-[#E0F2FE]' : 'text-[#475569]'}`}
-                    >
-                      <span>Admin (Safety Oversight)</span>
-                      {role === 'admin' && <CheckCircle2 className="w-3.5 h-3.5 text-[#0284C7]" />}
-                    </button>
+                  <div className="p-2 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] text-[11px] font-mono text-[#64748B]">
+                    <div className="text-[10px] uppercase font-bold text-[#94A3B8]">Connected Role</div>
+                    <div className="text-[#0F172A] font-bold">
+                      {role === 'driver' ? 'EV Driver Account' : role === 'hub' ? 'Charging Hub Operator' : 'Grid Safety Supervisor'}
+                    </div>
                   </div>
 
                   <div className="pt-2 mt-2 border-t border-[#E2E8F0]">
@@ -340,34 +296,42 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile nav */}
       <div className="md:hidden flex items-center justify-around mt-3 pt-2 border-t border-[#E2E8F0] text-xs font-mono">
-        <button
-          onClick={() => { setCurrentTab('driver'); switchRole('driver'); }}
-          className={`flex flex-col items-center gap-1 ${currentTab === 'driver' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
-        >
-          <MapPin className="w-4 h-4" />
-          <span>Map</span>
-        </button>
-        <button
-          onClick={() => setCurrentTab('bookings')}
-          className={`flex flex-col items-center gap-1 ${currentTab === 'bookings' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
-        >
-          <Car className="w-4 h-4" />
-          <span>Sessions</span>
-        </button>
-        <button
-          onClick={() => { setCurrentTab('host'); switchRole('host'); }}
-          className={`flex flex-col items-center gap-1 ${currentTab === 'host' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          <span>Host</span>
-        </button>
-        <button
-          onClick={() => { setCurrentTab('admin'); switchRole('admin'); }}
-          className={`flex flex-col items-center gap-1 ${currentTab === 'admin' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Admin</span>
-        </button>
+        {role === 'driver' && (
+          <>
+            <button
+              onClick={() => setCurrentTab('driver')}
+              className={`flex flex-col items-center gap-1 ${currentTab === 'driver' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
+            >
+              <MapPin className="w-4 h-4" />
+              <span>Map</span>
+            </button>
+            <button
+              onClick={() => setCurrentTab('bookings')}
+              className={`flex flex-col items-center gap-1 ${currentTab === 'bookings' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
+            >
+              <Car className="w-4 h-4" />
+              <span>Sessions</span>
+            </button>
+          </>
+        )}
+        {role === 'hub' && (
+          <button
+            onClick={() => setCurrentTab('host')}
+            className="flex flex-col items-center gap-1 text-[#16A34A] font-bold"
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Hub Dashboard</span>
+          </button>
+        )}
+        {role === 'supervisor' && (
+          <button
+            onClick={() => setCurrentTab('admin')}
+            className="flex flex-col items-center gap-1 text-[#0284C7] font-bold"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Supervisor Console</span>
+          </button>
+        )}
       </div>
     </header>
   );

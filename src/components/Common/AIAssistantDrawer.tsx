@@ -52,7 +52,9 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
   ];
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-white border-l border-[#BAE6FD] shadow-2xl flex flex-col justify-between font-sans">
+    <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-xs flex justify-end">
+      <div className="fixed inset-0" onClick={onClose} />
+      <div className="relative z-10 w-full sm:w-[460px] h-full bg-white border-l border-[#BAE6FD] shadow-2xl flex flex-col justify-between font-sans">
       
       {/* Header */}
       <div className="p-4 border-b border-[#BAE6FD] flex items-center justify-between bg-[#F0F9FF]">
@@ -147,6 +149,7 @@ export const AIAssistantDrawer: React.FC<AIAssistantDrawerProps> = ({ onClose })
         </form>
       </div>
 
+      </div>
     </div>
   );
 };

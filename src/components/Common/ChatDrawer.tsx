@@ -27,7 +27,9 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white border-l border-[#BAE6FD] shadow-2xl flex flex-col justify-between font-sans">
+    <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-xs flex justify-end">
+      <div className="fixed inset-0" onClick={onClose} />
+      <div className="relative z-10 w-full sm:w-96 h-full bg-white border-l border-[#BAE6FD] shadow-2xl flex flex-col justify-between font-sans">
       
       {/* Header */}
       <div className="p-4 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F0F9FF]">
@@ -125,6 +127,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ onClose }) => {
 
       </div>
 
+      </div>
     </div>
   );
 };
