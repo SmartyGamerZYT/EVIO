@@ -2,16 +2,18 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ChargerListing } from '../../types';
 import { LiveMap } from '../Map/LiveMap';
+import { HeatmapView } from '../Map/HeatmapView';
 import { DiscoveryFilters, FilterState } from './DiscoveryFilters';
 import { ChargerCard } from './ChargerCard';
 import { ChargerDetailModal } from './ChargerDetailModal';
-import { Database, PlusCircle, AlertCircle, Truck, Repeat, Radio } from 'lucide-react';
+import { Database, PlusCircle, AlertCircle, Truck, Repeat, Radio, Activity } from 'lucide-react';
 
 interface DriverViewProps {
   onOpenActiveSession: () => void;
   onNavigateToBookings?: () => void;
   onOpenBatteryDelivery?: () => void;
   onOpenV2V?: () => void;
+  onOpenFranchise?: () => void;
 }
 
 export const DriverView: React.FC<DriverViewProps> = ({ 
@@ -19,6 +21,7 @@ export const DriverView: React.FC<DriverViewProps> = ({
   onNavigateToBookings,
   onOpenBatteryDelivery,
   onOpenV2V,
+  onOpenFranchise,
 }) => {
   const { chargers, loadSeedChargers, userCoords, setUserCoords } = useApp();
 
@@ -177,8 +180,10 @@ export const DriverView: React.FC<DriverViewProps> = ({
         totalResults={filteredChargers.length}
       />
 
-      {/* Main Content: Map or Grid */}
-      {filters.viewMode === 'map' ? (
+      {/* Main Content: Heatmap, Map or List */}
+      {filters.viewMode === 'heatmap' ? (
+        <HeatmapView onOpenFranchise={onOpenFranchise} />
+      ) : filters.viewMode === 'map' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[580px]">
           
           {/* Left Column: 4-Cols Scrollable Results List */}

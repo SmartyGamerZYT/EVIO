@@ -9,7 +9,10 @@ import {
   DisputeReport,
   BatteryDeliveryRequest,
   FranchiseApplication,
-  V2VReverseChargeRequest 
+  V2VReverseChargeRequest,
+  ActiveOnlineDriver,
+  HeatmapZone,
+  LocationPremiseType 
 } from '../types';
 import { 
   INITIAL_USERS, 
@@ -19,8 +22,11 @@ import {
   SEED_CALIBRATION_CHARGERS,
   INITIAL_BATTERY_DELIVERIES,
   INITIAL_FRANCHISE_APPLICATIONS,
-  INITIAL_V2V_REQUESTS 
+  INITIAL_V2V_REQUESTS,
+  INITIAL_ONLINE_DRIVERS,
+  INITIAL_HEATMAP_ZONES 
 } from '../data/mockData';
+import { fetchOpenChargeMapStations } from '../services/openChargeMapService';
 
 export type Currency = 'USD' | 'EUR' | 'INR' | 'GBP';
 
@@ -75,12 +81,16 @@ interface AppContextType {
   franchiseApplications: FranchiseApplication[];
   submitFranchiseApplication: (app: Omit<FranchiseApplication, 'id' | 'createdAt' | 'status'>) => FranchiseApplication;
   updateFranchiseStatus: (id: string, status: FranchiseApplication['status']) => void;
+  quoteFranchiseApplication: (id: string, quotedRate: number, supervisorNotes: string) => void;
   v2vRequests: V2VReverseChargeRequest[];
   createV2VRequest: (data: Omit<V2VReverseChargeRequest, 'id' | 'createdAt' | 'status'>) => V2VReverseChargeRequest;
   acceptV2VRequest: (requestId: string, donorDriverId: string, donorDriverName: string, donorVehicle: string) => void;
   startV2VTransfer: (requestId: string) => void;
   completeV2VTransfer: (requestId: string, transferredKwh: number) => void;
   cancelV2VRequest: (requestId: string) => void;
+  onlineDrivers: ActiveOnlineDriver[];
+  sendDirectV2VRequest: (driverId: string, requestedKwh: number, payout: number) => V2VReverseChargeRequest;
+  heatmapZones: HeatmapZone[];
   notifications: Array<{ id: string; title: string; desc: string; time: string; read: boolean }>;
   markNotificationsAsRead: () => void;
 }
@@ -194,8 +204,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [chargers, setChargers] = useState<ChargerListing[]>(() => {
     const saved = localStorage.getItem('evio_chargers');
-    return saved ? JSON.parse(saved) : INITIAL_CHARGERS;
+    if (saved) {
+      try {
+        const parsed: ChargerListing[] = JSON.parse(saved);
+        // Merge public stations if not present yet
+        const hasPublic = parsed.some(c => c.isPublicStation);
+        if (!hasPublic) {
+          const publicSeed = INITIAL_CHARGERS.filter(c => c.isPublicStation);
+          return [...parsed, ...publicSeed];
+        }
+        return parsed;
+      } catch (e) {
+        return INITIAL_CHARGERS;
+      }
+    }
+    return INITIAL_CHARGERS;
   });
+
+  const [onlineDrivers, setOnlineDrivers] = useState<ActiveOnlineDriver[]>(() => {
+    const saved = localStorage.getItem('evio_online_drivers_pool');
+    return saved ? JSON.parse(saved) : INITIAL_ONLINE_DRIVERS;
+  });
+
+  const [heatmapZones] = useState<HeatmapZone[]>(INITIAL_HEATMAP_ZONES);
 
   const [bookings, setBookings] = useState<Booking[]>(() => {
     const saved = localStorage.getItem('evio_bookings');
@@ -256,6 +287,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('evio_bookings', JSON.stringify(bookings));
   }, [bookings]);
+
+  // Real-time Active Online EV Drivers Heartbeat (Keeps tab active in background & syncs across browser sessions)
+  useEffect(() => {
+    const updatePresence = () => {
+      setOnlineDrivers(prev => {
+        const now = Date.now();
+        let updated = [...prev];
+
+        // If current user is logged in as a driver, register their live session in the pool
+        if (currentUser && currentUser.role === 'driver') {
+          const myIdx = updated.findIndex(d => d.id === currentUser.id);
+          const myDriverData: ActiveOnlineDriver = {
+            id: currentUser.id,
+            name: currentUser.name,
+            phone: currentUser.phone || '+91 98333-44556',
+            vehicle: currentUser.vehicle ? `${currentUser.vehicle.make} ${currentUser.vehicle.model}` : 'Tata Nexon EV Max',
+            batterySoc: 78,
+            hasV2VCable: Boolean(currentUser.hasV2VCapableVehicle ?? true),
+            v2vOutputKw: 11,
+            lat: userCoords[0] + 0.002,
+            lng: userCoords[1] + 0.003,
+            highwayCorridor: 'NH-48 Expressway Corridor (Your Live Background Session)',
+            isOnline: true,
+            lastHeartbeat: now,
+            isBackgroundActive: true,
+          };
+
+          if (myIdx >= 0) {
+            updated[myIdx] = myDriverData;
+          } else {
+            updated.push(myDriverData);
+          }
+        }
+
+        // Keep active simulated grid peers alive with fresh timestamps
+        updated = updated.map(d => {
+          if (d.id.startsWith('drv-online-')) {
+            return {
+              ...d,
+              lastHeartbeat: now,
+              isOnline: true,
+              isBackgroundActive: true,
+            };
+          }
+          // Real peer tabs timeout after 35 seconds of inactivity
+          const isAlive = (now - d.lastHeartbeat) < 35000;
+          return { ...d, isOnline: isAlive };
+        });
+
+        localStorage.setItem('evio_online_drivers_pool', JSON.stringify(updated));
+        return updated;
+      });
+    };
+
+    updatePresence();
+    const interval = setInterval(updatePresence, 5000);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'evio_online_drivers_pool' && e.newValue) {
+        try {
+          setOnlineDrivers(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [currentUser, userCoords]);
+
+  // Open Charge Map real-time public stations integration using API Key
+  useEffect(() => {
+    let isMounted = true;
+    fetchOpenChargeMapStations(userCoords[0], userCoords[1], 50).then(ocmStations => {
+      if (!isMounted || ocmStations.length === 0) return;
+      setChargers(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const newStations = ocmStations.filter(s => !existingIds.has(s.id));
+        if (newStations.length === 0) return prev;
+        const merged = [...prev, ...newStations];
+        localStorage.setItem('evio_chargers', JSON.stringify(merged));
+        return merged;
+      });
+    }).catch(err => console.warn('Open Charge Map sync warning:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userCoords[0], userCoords[1]]);
 
   const role: UserRole = currentUser?.role || 'driver';
 
@@ -826,6 +948,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
   };
 
+  const quoteFranchiseApplication = (id: string, quotedRate: number, supervisorNotes: string) => {
+    setFranchiseApplications(prev => prev.map(a => a.id === id ? {
+      ...a,
+      status: 'quotation-sent',
+      quotedRate,
+      supervisorNotes,
+    } : a));
+    const target = franchiseApplications.find(a => a.id === id);
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Wholesale Quotation Dispatched to Applicant',
+        desc: `Supervisor quoted ₹${quotedRate.toLocaleString('en-IN')} for ${target?.applicantName || 'Applicant'} (${target?.packageType.toUpperCase()} Hub) in ${target?.city}.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
   // Peer-to-Peer V2V Reverse Charging
   const createV2VRequest = (data: Omit<V2VReverseChargeRequest, 'id' | 'createdAt' | 'status'>): V2VReverseChargeRequest => {
     const newReq: V2VReverseChargeRequest = {
@@ -907,6 +1049,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
   };
 
+  const sendDirectV2VRequest = (driverId: string, requestedKwh: number, payout: number): V2VReverseChargeRequest => {
+    const targetDriver = onlineDrivers.find(d => d.id === driverId);
+    return createV2VRequest({
+      strandedDriverId: currentUser?.id || 'usr-driver-demo',
+      strandedDriverName: currentUser?.name || 'Stranded EV Driver',
+      strandedDriverPhone: currentUser?.phone || '+91 99887-76655',
+      strandedVehicle: currentUser?.vehicle ? `${currentUser.vehicle.make} ${currentUser.vehicle.model}` : 'Tata Nexon EV Max',
+      location: {
+        lat: userCoords[0],
+        lng: userCoords[1],
+        highwayName: `NH-48 Corridor (Directed to ${targetDriver ? targetDriver.name : 'Active Driver'} at ${targetDriver ? targetDriver.vehicle : 'Passing EV'})`,
+      },
+      currentSoc: 4,
+      requestedKwh,
+      offeredPayout: payout,
+    });
+  };
+
   const cancelV2VRequest = (requestId: string) => {
     setV2vRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'cancelled' } : r));
   };
@@ -961,12 +1121,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         franchiseApplications,
         submitFranchiseApplication,
         updateFranchiseStatus,
+        quoteFranchiseApplication,
         v2vRequests,
         createV2VRequest,
         acceptV2VRequest,
         startV2VTransfer,
         completeV2VTransfer,
         cancelV2VRequest,
+        onlineDrivers,
+        sendDirectV2VRequest,
+        heatmapZones,
         notifications,
         markNotificationsAsRead,
       }}

@@ -10,7 +10,8 @@ import {
   Zap, 
   Navigation,
   Database,
-  PlusCircle
+  PlusCircle,
+  Activity
 } from 'lucide-react';
 import { ConnectorType, PowerTier } from '../../types';
 import { useApp } from '../../context/AppContext';
@@ -23,7 +24,7 @@ export interface FilterState {
   maxPrice: number;
   selectedAmenities: string[];
   sortBy: 'nearest' | 'cheapest' | 'rating' | 'power';
-  viewMode: 'map' | 'list';
+  viewMode: 'map' | 'list' | 'heatmap';
   radiusKm: number;
 }
 
@@ -138,6 +139,16 @@ export const DiscoveryFilters: React.FC<DiscoveryFiltersProps> = ({
           >
             <List className="w-3.5 h-3.5" />
             <span className="hidden md:inline font-mono">List</span>
+          </button>
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, viewMode: 'heatmap' }))}
+            className={`p-2 rounded-lg text-xs flex items-center gap-1.5 transition-all ${
+              filters.viewMode === 'heatmap' ? 'bg-[#FFF1F2] text-[#E11D48] font-bold shadow-xs border border-[#FECDD3]' : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+            title="Heatmap: Active EV Density & Charging Deserts"
+          >
+            <Activity className="w-3.5 h-3.5 text-[#E11D48]" />
+            <span className="hidden md:inline font-mono">Heatmap</span>
           </button>
         </div>
       </div>

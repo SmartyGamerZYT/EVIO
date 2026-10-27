@@ -11,10 +11,15 @@ import {
   ChevronLeft,
   FileText,
   Image as ImageIcon,
-  Navigation
+  Navigation,
+  Home,
+  Building2,
+  Briefcase,
+  ShoppingBag,
+  Hotel
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { ConnectorType, PowerTier, PricingType } from '../../types';
+import { ConnectorType, PowerTier, PricingType, LocationPremiseType } from '../../types';
 
 interface ListingWizardModalProps {
   onClose: () => void;
@@ -41,6 +46,7 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [locationType, setLocationType] = useState<LocationPremiseType>('hub');
   const [approxAddress, setApproxAddress] = useState('');
   const [exactAddress, setExactAddress] = useState('');
   const [lat, setLat] = useState(userCoords ? userCoords[0] : 37.7749);
@@ -245,6 +251,8 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
       accessNotes,
       bookingMode,
       maxDurationHours,
+      locationType,
+      isPublicStation: false,
     });
 
     onSuccess();
@@ -431,6 +439,50 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
               </div>
 
               <div className="space-y-3 pt-2">
+                {/* Location Premise Type Tag Selector */}
+                <div>
+                  <label className="text-xs font-mono font-bold text-[#475569] block mb-1.5">
+                    Premise Type / Property Category *
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {[
+                      { type: 'home' as LocationPremiseType, label: 'Home', sub: 'Private House', icon: Home },
+                      { type: 'hub' as LocationPremiseType, label: 'Hub', sub: 'EVIO Community', icon: Building2 },
+                      { type: 'office' as LocationPremiseType, label: 'Office', sub: 'Tech Park', icon: Briefcase },
+                      { type: 'commercial' as LocationPremiseType, label: 'Commercial', sub: 'Mall / Plaza', icon: ShoppingBag },
+                      { type: 'hotel' as LocationPremiseType, label: 'Hotel', sub: 'Hospitality', icon: Hotel },
+                    ].map(item => {
+                      const Icon = item.icon;
+                      const isSelected = locationType === item.type;
+                      return (
+                        <button
+                          key={item.type}
+                          type="button"
+                          onClick={() => setLocationType(item.type)}
+                          className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                            isSelected
+                              ? 'border-[#0284C7] bg-[#F0F9FF] ring-2 ring-[#0284C7]/20 shadow-xs'
+                              : 'border-[#CBD5E1] bg-white hover:border-[#0284C7] hover:bg-[#F8FAFC]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <Icon className={`w-4 h-4 ${isSelected ? 'text-[#0284C7]' : 'text-[#64748B]'}`} />
+                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#0284C7]"></span>}
+                          </div>
+                          <div>
+                            <span className={`text-xs font-mono font-bold block ${isSelected ? 'text-[#0284C7]' : 'text-[#0F172A]'}`}>
+                              {item.label}
+                            </span>
+                            <span className="text-[10px] text-[#64748B] block truncate">
+                              {item.sub}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-xs font-mono font-bold text-[#475569] block mb-1">Station Listing Title *</label>
                   <input

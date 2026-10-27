@@ -7,6 +7,7 @@ interface LiveMapProps {
   chargers: ChargerListing[];
   selectedCharger: ChargerListing | null;
   onSelectCharger: (charger: ChargerListing) => void;
+  onBookCharger?: (charger: ChargerListing) => void;
   userCoords: [number, number];
   radiusKm: number;
 }
@@ -15,6 +16,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
   chargers,
   selectedCharger,
   onSelectCharger,
+  onBookCharger,
   userCoords,
   radiusKm,
 }) => {
@@ -124,27 +126,34 @@ export const LiveMap: React.FC<LiveMapProps> = ({
     markersRef.current = {};
 
     chargers.forEach(charger => {
-      let color = '#16A34A'; // Green for Available
-      let statusLabel = 'Available';
-      let shadowColor = 'rgba(22, 163, 74, 0.25)';
+      const isPublic = Boolean(charger.isPublicStation);
+      
+      // Pin styling based on whether it is an EVIO Hub or Public Third-Party Station
+      let color = isPublic ? '#7C3AED' : '#16A34A'; // Purple for Public, Green for Hub Available
+      let statusLabel = isPublic ? 'Public Station' : 'Available';
+      let shadowColor = isPublic ? 'rgba(124, 58, 237, 0.35)' : 'rgba(22, 163, 74, 0.25)';
 
-      if (charger.status === 'in-use') {
-        color = '#D97706'; // Amber for In-Use
+      if (!isPublic && charger.status === 'in-use') {
+        color = '#D97706';
         statusLabel = 'In Use';
         shadowColor = 'rgba(217, 119, 6, 0.25)';
-      } else if (charger.status === 'offline') {
-        color = '#64748B'; // Slate for Offline
+      } else if (!isPublic && charger.status === 'offline') {
+        color = '#64748B';
         statusLabel = 'Offline';
         shadowColor = 'rgba(100, 116, 139, 0.2)';
       }
 
       const isSelected = selectedCharger?.id === charger.id;
 
+      const badgeLabel = isPublic ? 'PUBLIC' : 'HUB';
+
       const customHtml = `
         <div class="group cursor-pointer transform transition-transform duration-200 hover:scale-110 ${isSelected ? 'scale-125 z-50' : ''}">
           <div style="background-color: #FFFFFF; border: 2px solid ${color}; box-shadow: 0 4px 14px ${shadowColor};" 
-               class="px-2.5 py-1 rounded-full flex items-center gap-1.5 font-mono text-xs font-bold text-[#0F172A] whitespace-nowrap">
-            <span style="background-color: ${color};" class="w-2 h-2 rounded-full animate-pulse"></span>
+               class="px-2 py-1 rounded-full flex items-center gap-1 font-mono text-[11px] font-bold text-[#0F172A] whitespace-nowrap">
+            <span style="background-color: ${color}; color: white;" class="px-1 py-0.2 rounded text-[9px] uppercase font-bold">
+              ${badgeLabel}
+            </span>
             <span>${charger.powerKw} kW</span>
           </div>
           <div style="border-top-color: ${color};" 
@@ -155,30 +164,51 @@ export const LiveMap: React.FC<LiveMapProps> = ({
       const markerIcon = L.divIcon({
         className: 'custom-charger-pin',
         html: customHtml,
-        iconSize: [60, 32],
-        iconAnchor: [30, 32],
+        iconSize: [75, 34],
+        iconAnchor: [37, 34],
       });
 
       const marker = L.marker([charger.lat, charger.lng], { icon: markerIcon }).addTo(map);
 
       const popupHtml = `
-        <div style="width: 220px; font-family: 'Inter', sans-serif; padding: 4px;">
-          <div style="font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 4px;">
+        <div style="width: 240px; font-family: 'Inter', sans-serif; padding: 4px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-size: 10px; font-weight: 700; font-family: monospace; padding: 2px 6px; border-radius: 4px; background: ${color}15; color: ${color};">
+              ${isPublic ? (charger.operatorBrand || 'PUBLIC FAST STATION') : 'EVIO COMMUNITY HUB'}
+            </span>
+            <span style="font-size: 10px; font-family: monospace; color: #64748B;">
+              ${charger.powerKw} kW
+            </span>
+          </div>
+
+          <div style="font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 3px;">
             ${charger.title}
           </div>
           <div style="font-size: 11px; color: #64748B; margin-bottom: 8px;">
             ${charger.approxAddress}
           </div>
+
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #E2E8F0; padding-top: 8px;">
             <div>
-              <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #0284C7;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: ${color};">
                 ${formatCurrency(charger.priceRate)}
               </span>
-              <span style="font-size: 10px; color: #64748B;">/${charger.pricingType === 'per-kwh' ? 'kWh' : 'hr'}</span>
+              <span style="font-size: 10px; color: #64748B;">/kWh</span>
             </div>
-            <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: ${color}15; color: ${color}; font-weight: 700; font-family: monospace;">
-              ${statusLabel.toUpperCase()}
-            </span>
+            
+            ${isPublic ? `
+              <span style="font-size: 10px; padding: 3px 8px; border-radius: 6px; background: #F3E8FF; color: #7C3AED; font-weight: 700; font-family: monospace;">
+                DRIVE-IN ONLY
+              </span>
+            ` : `
+              <span style="font-size: 10px; padding: 3px 8px; border-radius: 6px; background: #E0F2FE; color: #0284C7; font-weight: 700; font-family: monospace;">
+                BOOK SLOT READY
+              </span>
+            `}
+          </div>
+
+          <div style="margin-top: 6px; font-size: 10px; font-family: monospace; color: ${isPublic ? '#7C3AED' : '#0284C7'}; text-align: center; border-top: 1px dashed #E2E8F0; padding-top: 5px;">
+            ${isPublic ? '• Public facility: Walk-in / drive-in charging' : '• Click card to reserve charging slot'}
           </div>
         </div>
       `;
@@ -207,19 +237,19 @@ export const LiveMap: React.FC<LiveMapProps> = ({
     <div className="relative w-full h-full min-h-[450px] rounded-2xl overflow-hidden border border-[#BAE6FD] shadow-sm bg-white z-0 isolate">
       <div ref={mapContainerRef} className="w-full h-full" />
       
-      {/* Floating Status Legend */}
-      <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md border border-[#BAE6FD] rounded-xl px-3 py-2 flex items-center gap-4 text-[11px] font-mono shadow-md">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#16A34A]"></span>
-          <span className="text-[#64748B]">Available</span>
+      {/* Floating Status & Pin Type Legend */}
+      <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md border border-[#BAE6FD] rounded-xl px-3 py-2 flex flex-wrap items-center gap-3 text-[11px] font-mono shadow-md">
+        <div className="flex items-center gap-1.5 border-r border-[#E2E8F0] pr-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] border border-white shadow-xs"></span>
+          <span className="text-[#0F172A] font-bold">EVIO Hub (Bookable)</span>
+        </div>
+        <div className="flex items-center gap-1.5 border-r border-[#E2E8F0] pr-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED] border border-white shadow-xs"></span>
+          <span className="text-[#7C3AED] font-bold">Public Station (Drive-in)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
           <span className="text-[#64748B]">In Use</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#64748B]"></span>
-          <span className="text-[#64748B]">Offline</span>
         </div>
       </div>
     </div>

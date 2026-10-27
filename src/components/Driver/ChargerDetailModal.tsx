@@ -5,7 +5,6 @@ import {
   MapPin, 
   ShieldCheck, 
   Clock, 
-  Calendar, 
   CheckCircle2, 
   AlertTriangle, 
   Wallet, 
@@ -13,7 +12,13 @@ import {
   Smartphone, 
   Info,
   Car,
-  Check
+  Check,
+  Navigation,
+  Building2,
+  Home,
+  Briefcase,
+  ShoppingBag,
+  Hotel
 } from 'lucide-react';
 import { ChargerListing } from '../../types';
 import { useApp } from '../../context/AppContext';
@@ -74,79 +79,88 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
       paymentMethod
     );
 
-    if (!result.success) {
-      setBookingError(result.error || 'Failed to complete charger booking.');
-      setIsSubmitting(false);
-      return;
-    }
-
     setIsSubmitting(false);
-    onBookingSuccess();
+
+    if (result.success) {
+      onBookingSuccess();
+    } else {
+      setBookingError(result.error || 'Failed to submit booking request.');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
-      <div className="bg-white border border-[#BAE6FD] rounded-card w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl relative my-auto">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in font-sans">
+      <div className="bg-white rounded-2xl border border-[#BAE6FD] max-w-4xl w-full overflow-hidden shadow-2xl my-auto">
         
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/90 border border-[#CBD5E1] flex items-center justify-center text-[#64748B] hover:text-[#0F172A] shadow-xs"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        {/* Modal Grid (12 cols) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-          
-          {/* Left Column: 7 Cols Technical Specs */}
-          <div className="lg:col-span-7 p-6 border-b lg:border-b-0 lg:border-r border-[#E2E8F0] space-y-5">
-            
-            {/* Main Photo */}
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-[#BAE6FD] bg-[#F8FAFC] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              charger.isPublicStation ? 'bg-[#F3E8FF] text-[#7C3AED]' : 'bg-[#E0F2FE] text-[#0284C7]'
+            }`}>
+              <Zap className="w-4 h-4 fill-current" />
+            </div>
             <div>
-              <div className="h-64 sm:h-72 rounded-2xl overflow-hidden relative bg-[#F1F5F9] mb-3">
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-base text-[#0F172A]">{charger.title}</h2>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${
+                  charger.isPublicStation 
+                    ? 'bg-[#F3E8FF] text-[#7C3AED] border border-[#D8B4FE]' 
+                    : 'bg-[#E0F2FE] text-[#0284C7] border border-[#BAE6FD]'
+                }`}>
+                  {charger.isPublicStation ? 'Public Station' : 'EVIO Hub'}
+                </span>
+                {charger.locationType && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[#F1F5F9] text-[#475569] border border-[#CBD5E1]">
+                    {charger.locationType}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#64748B] font-mono mt-0.5">{charger.approxAddress}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white border border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] flex items-center justify-center transition-colors shadow-xs"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 max-h-[80vh] overflow-y-auto">
+          
+          {/* Left Column: 7 Cols Photos & Tech Details */}
+          <div className="lg:col-span-7 p-5 sm:p-6 space-y-5">
+            
+            {/* Main Photo & Thumbs */}
+            <div className="space-y-2">
+              <div className="relative h-56 sm:h-64 rounded-xl overflow-hidden bg-[#F1F5F9] border border-[#CBD5E1]">
                 <img 
-                  src={charger.photos[activePhotoIndex] || charger.photos[0]} 
+                  src={charger.photos[activePhotoIndex] || 'https://images.unsplash.com/photo-1558441719-798481498b3f?w=800'} 
                   alt={charger.title} 
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full border border-[#BAE6FD] text-xs font-mono font-bold text-[#0284C7] flex items-center gap-1.5 shadow-sm">
-                  <Zap className="w-3.5 h-3.5 fill-[#0284C7]" />
-                  <span>{charger.powerKw} kW ({charger.powerTier.toUpperCase()})</span>
+                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-white font-mono text-[11px] border border-white/20">
+                  {charger.powerKw} kW • {charger.connectorTypes.join(' / ')}
                 </div>
               </div>
 
               {charger.photos.length > 1 && (
-                <div className="flex items-center gap-2">
-                  {charger.photos.map((photo, idx) => (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {charger.photos.map((url, i) => (
                     <button
-                      key={idx}
-                      onClick={() => setActivePhotoIndex(idx)}
-                      className={`w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${
-                        activePhotoIndex === idx ? 'border-[#0284C7]' : 'border-transparent opacity-60 hover:opacity-100'
+                      key={i}
+                      onClick={() => setActivePhotoIndex(i)}
+                      className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
+                        activePhotoIndex === i ? 'border-[#0284C7] ring-2 ring-[#0284C7]/30' : 'border-[#CBD5E1] opacity-70'
                       }`}
                     >
-                      <img src={photo} alt="" className="w-full h-full object-cover" />
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Title & Host info */}
-            <div>
-              <h2 className="text-xl font-bold text-[#0F172A]">{charger.title}</h2>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-[#64748B] font-mono mt-1">
-                <span>Host: <strong className="text-[#0F172A]">{charger.hostName}</strong></span>
-                <span>•</span>
-                <span>Rating: <strong className="text-[#16A34A]">{charger.hostRating.toFixed(1)}</strong> ({charger.hostReviewsCount} reviews)</span>
-                {charger.safetyCertificateVerified && (
-                  <span className="px-2 py-0.5 rounded bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC] flex items-center gap-1 font-bold">
-                    <ShieldCheck className="w-3 h-3" />
-                    Certified Safe
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* Compatibility Alert */}
@@ -167,7 +181,7 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
                   <div className="text-xs">
                     <p className="font-bold text-[#DC2626] font-mono">Connector Incompatibility Warning</p>
                     <p className="text-[#B91C1C]">
-                      Your vehicle requires {userConnector}. This station only supplies {charger.connectorTypes.join(', ')}. A physical adapter will be required.
+                      Your vehicle requires {userConnector}. This station supplies {charger.connectorTypes.join(', ')}.
                     </p>
                   </div>
                 </div>
@@ -189,8 +203,8 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
                 <span className="font-mono text-base font-bold text-[#0F172A]">{charger.simultaneousSlots}</span>
               </div>
               <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
-                <span className="text-[10px] text-[#64748B] uppercase font-mono font-bold block">Booking Type</span>
-                <span className="font-mono text-base font-bold text-[#16A34A] uppercase">{charger.bookingMode}</span>
+                <span className="text-[10px] text-[#64748B] uppercase font-mono font-bold block">Property Type</span>
+                <span className="font-mono text-base font-bold text-[#16A34A] uppercase">{charger.locationType || 'Hub'}</span>
               </div>
             </div>
 
@@ -208,204 +222,248 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Security Note */}
+            {/* Location & Access Note */}
             <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center gap-2.5 text-xs text-[#64748B]">
               <Info className="w-4 h-4 text-[#0284C7] shrink-0" />
               <span>
-                <strong>Privacy Guaranteed:</strong> Exact address and security gate passcode are revealed instantly upon confirmed booking.
+                <strong>Station Navigation:</strong> Exact address & gate access passcode are displayed upon booking or direct arrival.
               </span>
             </div>
 
           </div>
 
-          {/* Right Column: 5 Cols Pricing, Slot & Checkout */}
-          <div className="lg:col-span-5 p-6 bg-[#F0F9FF] flex flex-col justify-between space-y-6 border-l border-[#BAE6FD]">
-            
-            <div className="space-y-5">
-              
-              {/* Tariff banner */}
-              <div className="border-b border-[#BAE6FD] pb-4">
-                <span className="text-xs text-[#64748B] uppercase font-mono font-bold tracking-wider block mb-1">
-                  Charging Rate
-                </span>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-3xl font-extrabold text-[#0284C7]">
-                    {formatCurrency(charger.priceRate)}
+          {/* Right Column: Branching for Public Station vs EVIO Hub */}
+          {charger.isPublicStation ? (
+            /* Public Station: Walk-in / Drive-in Only */
+            <div className="lg:col-span-5 p-6 bg-[#FAF5FF] flex flex-col justify-between space-y-6 border-l border-[#E9D5FF]">
+              <div className="space-y-5">
+                <div className="border-b border-[#E9D5FF] pb-4">
+                  <span className="px-2.5 py-1 rounded-full bg-[#7C3AED] text-white text-[10px] font-mono font-bold inline-block mb-2 shadow-xs">
+                    PUBLIC THIRD-PARTY STATION
                   </span>
-                  <span className="text-xs text-[#64748B] font-mono">
-                    per {charger.pricingType === 'per-kwh' ? 'kWh delivered' : 'hour'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Arrival Slot */}
-              <div className="space-y-2">
-                <label className="text-xs font-mono font-bold text-[#0F172A] flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>Select Scheduled Charging Slot</span>
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {[
-                    'Today, 02:00 PM - 03:00 PM',
-                    'Today, 04:30 PM - 05:30 PM',
-                    'Today, 07:00 PM - 08:00 PM',
-                    'Tomorrow, 09:30 AM - 10:30 AM'
-                  ].map(slot => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setSelectedSlotTime(slot)}
-                      className={`p-2.5 rounded-xl border text-xs text-left font-mono transition-all ${
-                        selectedSlotTime === slot 
-                          ? 'bg-white border-[#0284C7] text-[#0284C7] font-bold shadow-xs' 
-                          : 'bg-white/80 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Duration selector */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="font-bold text-[#0F172A]">Charging Duration:</span>
-                  <span className="text-[#0284C7] font-bold">{selectedDuration} hours</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {[0.5, 1.0, 1.5, 2.0, 3.0].map(dur => (
-                    <button
-                      key={dur}
-                      type="button"
-                      onClick={() => setSelectedDuration(dur)}
-                      className={`flex-1 py-1.5 rounded-lg border text-xs font-mono transition-all ${
-                        selectedDuration === dur
-                          ? 'bg-[#0284C7] text-white font-bold border-[#0284C7] shadow-xs'
-                          : 'bg-white border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
-                      }`}
-                    >
-                      {dur}h
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Energy projection */}
-              <div className="p-3 rounded-xl bg-white border border-[#BAE6FD] flex items-center justify-between text-xs font-mono shadow-xs">
-                <div>
-                  <span className="text-[#64748B] block text-[10px] uppercase font-bold">Estimated Delivery</span>
-                  <span className="font-bold text-[#0F172A] text-sm">~{estimatedKwh} kWh</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[#64748B] block text-[10px] uppercase font-bold">Battery Gain</span>
-                  <span className="font-bold text-[#16A34A] text-sm">
-                    +{Math.round((estimatedKwh / (currentUser?.vehicle?.batteryCapacity || 60)) * 100)}% SOC
-                  </span>
-                </div>
-              </div>
-
-              {/* Payment selector */}
-              <div className="space-y-2">
-                <span className="text-xs font-mono font-bold text-[#0F172A] block">Payment Method</span>
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('wallet')}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
-                      paymentMethod === 'wallet' 
-                        ? 'bg-white border-[#0284C7] text-[#0F172A] shadow-xs' 
-                        : 'bg-white/70 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-[#0284C7]" />
-                      <span>Evio Pay Wallet</span>
-                    </div>
-                    <span className="font-bold text-[#16A34A]">
-                      {formatCurrency(currentUser?.walletBalance || 0)}
+                  <h3 className="text-xl font-bold text-[#0F172A]">
+                    {charger.operatorBrand || 'Public Fast EV Grid'}
+                  </h3>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="font-mono text-3xl font-extrabold text-[#7C3AED]">
+                      {formatCurrency(charger.priceRate)}
                     </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('upi')}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
-                      paymentMethod === 'upi' 
-                        ? 'bg-white border-[#0284C7] text-[#0F172A] shadow-xs' 
-                        : 'bg-white/70 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="w-4 h-4 text-[#0284C7]" />
-                      <span>Instant UPI / Apple Pay</span>
-                    </div>
-                    <span className="text-[10px] text-[#64748B]">Zero Fee</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
-                      paymentMethod === 'card' 
-                        ? 'bg-white border-[#0284C7] text-[#0F172A] shadow-xs' 
-                        : 'bg-white/70 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-[#0284C7]" />
-                      <span>Credit / Debit Card</span>
-                    </div>
-                    <span className="text-[10px] text-[#64748B]">Visa/MC</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Cost breakdown */}
-              <div className="pt-3 border-t border-[#BAE6FD] space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between text-[#64748B]">
-                  <span>Energy Subtotal ({estimatedKwh} kWh)</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-[#64748B]">
-                  <span>Network Platform Fee (10%)</span>
-                  <span>{formatCurrency(platformFee)}</span>
-                </div>
-                <div className="flex justify-between text-[#0F172A] font-bold pt-2 border-t border-[#BAE6FD]">
-                  <span className="text-sm">Total Amount</span>
-                  <span className="text-base text-[#0284C7]">{formatCurrency(totalAmount)}</span>
-                </div>
-              </div>
-
-              {bookingError && (
-                <div className="p-3 rounded-xl bg-[#FEF2F2] border-l-4 border-l-[#DC2626] text-xs text-[#DC2626] font-mono">
-                  <div className="flex items-center justify-between">
-                    <span>{bookingError}</span>
-                    {bookingError.includes('Insufficient') && (
-                      <button
-                        onClick={() => topUpWallet(500)}
-                        className="underline font-bold text-[#0F172A] ml-2"
-                      >
-                        + Add ₹500
-                      </button>
-                    )}
+                    <span className="text-xs text-[#64748B] font-mono">
+                      per kWh at terminal
+                    </span>
                   </div>
                 </div>
-              )}
+
+                {/* Public Station Notice */}
+                <div className="p-4 rounded-xl bg-white border border-[#D8B4FE] space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#7C3AED]">
+                    <Info className="w-4 h-4 shrink-0" />
+                    <span>No Advance Slot Reservation Required</span>
+                  </div>
+                  <p className="text-xs text-[#475569] leading-relaxed">
+                    This is a pre-existing public fast charging facility. Drivers can drive directly to the station bays and charge on a first-come, first-served basis.
+                  </p>
+                  <div className="pt-2 border-t border-[#F3E8FF] text-[11px] text-[#64748B] space-y-1">
+                    <p>• <strong>Payment:</strong> RFID card, operator mobile app, or terminal UPI.</p>
+                    <p>• <strong>Advance booking:</strong> Only EVIO Community Hubs support advance slot booking.</p>
+                  </div>
+                </div>
+
+                {/* Exact Location & Bay Access */}
+                <div className="p-3.5 rounded-xl bg-white border border-[#E2E8F0] space-y-1">
+                  <span className="text-[10px] font-mono font-bold text-[#64748B] uppercase block">Exact Station Bay Address</span>
+                  <p className="text-xs font-bold text-[#0F172A]">{charger.exactAddress}</p>
+                  <p className="text-[11px] text-[#64748B] font-mono">{charger.accessNotes}</p>
+                </div>
+              </div>
+
+              {/* Direct Navigation Button */}
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${charger.lat},${charger.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-mono font-bold text-xs tracking-wider shadow-md shadow-[#7C3AED]/25 active:scale-98 transition-all flex items-center justify-center gap-2"
+              >
+                <Navigation className="w-4 h-4" />
+                <span>NAVIGATE VIA GOOGLE MAPS / GPS</span>
+              </a>
+            </div>
+          ) : (
+            /* EVIO Community Hub: Full Slot Booking Workflow */
+            <div className="lg:col-span-5 p-6 bg-[#F0F9FF] flex flex-col justify-between space-y-6 border-l border-[#BAE6FD]">
+              
+              <div className="space-y-5">
+                
+                {/* Tariff banner */}
+                <div className="border-b border-[#BAE6FD] pb-4">
+                  <span className="text-xs text-[#64748B] uppercase font-mono font-bold tracking-wider block mb-1">
+                    Charging Rate
+                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-3xl font-extrabold text-[#0284C7]">
+                      {formatCurrency(charger.priceRate)}
+                    </span>
+                    <span className="text-xs text-[#64748B] font-mono">
+                      per {charger.pricingType === 'per-kwh' ? 'kWh delivered' : 'hour'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Arrival Slot */}
+                <div className="space-y-2">
+                  <label className="text-xs font-mono font-bold text-[#0F172A] flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#0284C7]" />
+                    <span>Select Scheduled Charging Slot</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      'Today, 02:00 PM - 03:00 PM',
+                      'Today, 04:30 PM - 05:30 PM',
+                      'Today, 07:00 PM - 08:00 PM',
+                      'Tomorrow, 09:30 AM - 10:30 AM'
+                    ].map(slot => (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setSelectedSlotTime(slot)}
+                        className={`p-2.5 rounded-xl border text-xs text-left font-mono transition-all ${
+                          selectedSlotTime === slot 
+                            ? 'bg-white border-[#0284C7] text-[#0284C7] font-bold shadow-xs' 
+                            : 'bg-white/80 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
+                        }`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Duration selector */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold text-[#0F172A]">Charging Duration:</span>
+                    <span className="text-[#0284C7] font-bold">{selectedDuration} hours</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[0.5, 1.0, 1.5, 2.0, 3.0].map(dur => (
+                      <button
+                        key={dur}
+                        type="button"
+                        onClick={() => setSelectedDuration(dur)}
+                        className={`flex-1 py-1.5 rounded-lg border text-xs font-mono transition-all ${
+                          selectedDuration === dur
+                            ? 'bg-[#0284C7] border-[#0284C7] text-white font-bold'
+                            : 'bg-white border-[#CBD5E1] text-[#64748B] hover:border-[#0284C7]'
+                        }`}
+                      >
+                        {dur}h
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Payment Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs font-mono font-bold text-[#0F172A] block">Payment Method</label>
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('wallet')}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
+                        paymentMethod === 'wallet' 
+                          ? 'bg-white border-[#0284C7] text-[#0F172A] shadow-xs' 
+                          : 'bg-white/70 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Wallet className="w-4 h-4 text-[#0284C7]" />
+                        <span>Evio Pay Wallet</span>
+                      </div>
+                      <span className="font-bold text-[#16A34A]">
+                        {formatCurrency(currentUser?.walletBalance || 0)}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('upi')}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
+                        paymentMethod === 'upi' 
+                          ? 'bg-white border-[#0284C7] text-[#0F172A] shadow-xs' 
+                          : 'bg-white/70 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-[#0284C7]" />
+                        <span>Instant UPI / Apple Pay</span>
+                      </div>
+                      <span className="text-[10px] text-[#64748B]">Zero Fee</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('card')}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
+                        paymentMethod === 'card' 
+                          ? 'bg-white border-[#0284C7] text-[#0F172A] shadow-xs' 
+                          : 'bg-white/70 border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-[#0284C7]" />
+                        <span>Credit / Debit Card</span>
+                      </div>
+                      <span className="text-[10px] text-[#64748B]">Visa/MC</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cost breakdown */}
+                <div className="pt-3 border-t border-[#BAE6FD] space-y-1.5 text-xs font-mono">
+                  <div className="flex justify-between text-[#64748B]">
+                    <span>Energy Subtotal ({estimatedKwh} kWh)</span>
+                    <span>{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-[#64748B]">
+                    <span>Network Platform Fee (10%)</span>
+                    <span>{formatCurrency(platformFee)}</span>
+                  </div>
+                  <div className="flex justify-between text-[#0F172A] font-bold pt-2 border-t border-[#BAE6FD]">
+                    <span className="text-sm">Total Amount</span>
+                    <span className="text-base text-[#0284C7]">{formatCurrency(totalAmount)}</span>
+                  </div>
+                </div>
+
+                {bookingError && (
+                  <div className="p-3 rounded-xl bg-[#FEF2F2] border-l-4 border-l-[#DC2626] text-xs text-[#DC2626] font-mono">
+                    <div className="flex items-center justify-between">
+                      <span>{bookingError}</span>
+                      {bookingError.includes('Insufficient') && (
+                        <button
+                          onClick={() => topUpWallet(500)}
+                          className="underline font-bold text-[#0F172A] ml-2"
+                        >
+                          + Add ₹500
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Action */}
+              <button
+                onClick={handleBook}
+                disabled={isSubmitting || charger.status === 'offline'}
+                className="w-full py-3.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-mono font-bold text-xs tracking-wider shadow-md shadow-[#0284C7]/25 active:scale-98 transition-all flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 fill-white" />
+                <span>REQUEST SLOT APPROVAL FROM HUB</span>
+              </button>
 
             </div>
-
-            {/* Action */}
-            <button
-              onClick={handleBook}
-              disabled={isSubmitting || charger.status === 'offline'}
-              className="w-full py-3.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-mono font-bold text-xs tracking-wider shadow-md shadow-[#0284C7]/25 active:scale-98 transition-all flex items-center justify-center gap-2"
-            >
-              <Zap className="w-4 h-4 fill-white" />
-              <span>REQUEST SLOT APPROVAL FROM HUB</span>
-            </button>
-
-          </div>
+          )}
 
         </div>
 

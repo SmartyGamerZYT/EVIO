@@ -83,6 +83,7 @@ const MainApp: React.FC = () => {
                 onNavigateToBookings={() => setCurrentTab('bookings')}
                 onOpenBatteryDelivery={() => setShowBatteryDeliveryModal(true)}
                 onOpenV2V={() => setShowV2VModal(true)}
+                onOpenFranchise={() => setShowFranchiseModal(true)}
               />
             )}
           </>

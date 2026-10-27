@@ -21,10 +21,11 @@ import {
   ArrowLeft,
   Building,
   ChevronRight,
-  Receipt
+  Receipt,
+  X
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { ChargerListing } from '../../types';
+import { ChargerListing, FranchiseApplication } from '../../types';
 import { ChargerInspectionModal } from '../Common/ChargerInspectionModal';
 
 export const SupervisorDashboard: React.FC = () => {
@@ -39,7 +40,8 @@ export const SupervisorDashboard: React.FC = () => {
     resolveDispute,
     bookings,
     franchiseApplications,
-    updateFranchiseStatus
+    updateFranchiseStatus,
+    quoteFranchiseApplication
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'hubs' | 'franchise' | 'grid' | 'disputes' | 'audit'>('all');
@@ -48,6 +50,13 @@ export const SupervisorDashboard: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [selectedChargerIdForReject, setSelectedChargerIdForReject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Wholesale Quotation modal state
+  const [selectedAppForQuote, setSelectedAppForQuote] = useState<FranchiseApplication | null>(null);
+  const [quoteRateInput, setQuoteRateInput] = useState<number>(380000);
+  const [quoteNotesInput, setQuoteNotesInput] = useState<string>(
+    'Location and substation feeder verified. Subsidized 40% bulk pricing sanctioned for turnkey installation.'
+  );
 
   const pendingListings = chargers.filter(c => c.listingStatus === 'pending');
   const liveListings = chargers.filter(c => c.listingStatus === 'live');
@@ -869,13 +878,19 @@ export const SupervisorDashboard: React.FC = () => {
                       </span>
                       <h3 className="text-lg font-bold text-[#0F172A]">{app.applicantName}</h3>
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
-                        app.status === 'approved' 
+                        app.status === 'quotation-sent' || app.status === 'approved' 
                           ? 'bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC]'
                           : app.status === 'rejected'
                           ? 'bg-[#FEE2E2] text-[#DC2626] border border-[#FCA5A5]'
                           : 'bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]'
                       }`}>
-                        {app.status === 'approved' ? 'WHOLESALE APPROVED' : app.status === 'rejected' ? 'REJECTED' : 'UNDER SUPERVISOR AUDIT'}
+                        {app.status === 'quotation-sent' 
+                          ? `QUOTED: ${formatCurrency(app.quotedRate || 0)}` 
+                          : app.status === 'approved' 
+                          ? 'WHOLESALE APPROVED' 
+                          : app.status === 'rejected' 
+                          ? 'REJECTED' 
+                          : 'PENDING SUPERVISOR VERIFICATION'}
                       </span>
                     </div>
 
@@ -883,14 +898,19 @@ export const SupervisorDashboard: React.FC = () => {
                       <div>
                         <span className="block text-[10px] text-[#94A3B8]">CITY / CORRIDOR</span>
                         <span className="text-[#0F172A] font-bold">{app.city}</span>
+                        {app.lat && (
+                          <span className="text-[10px] text-[#0284C7] block">GPS: {app.lat.toFixed(4)}, {app.lng?.toFixed(4)}</span>
+                        )}
                       </div>
                       <div>
-                        <span className="block text-[10px] text-[#94A3B8]">PACKAGE TYPE</span>
+                        <span className="block text-[10px] text-[#94A3B8]">PACKAGE SETUP</span>
                         <span className="text-[#0284C7] font-bold capitalize">{app.packageType} Hub Bundle</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-[#94A3B8]">WHOLESALE INVESTMENT</span>
-                        <span className="text-[#16A34A] font-bold">{formatCurrency(app.estimatedInvestment)}</span>
+                        <span className="block text-[10px] text-[#94A3B8]">SUPERVISOR QUOTE</span>
+                        <span className="text-[#16A34A] font-bold">
+                          {app.quotedRate ? formatCurrency(app.quotedRate) : 'Pending Feeder Audit'}
+                        </span>
                       </div>
                       <div>
                         <span className="block text-[10px] text-[#94A3B8]">SANCTIONED POWER</span>
@@ -899,7 +919,12 @@ export const SupervisorDashboard: React.FC = () => {
                     </div>
 
                     <p className="text-xs text-[#475569] font-sans bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]">
-                      <strong>Site Notes:</strong> {app.locationAddress}. {app.notes}
+                      <strong>Site Location:</strong> {app.locationAddress}. {app.notes}
+                      {app.supervisorNotes && (
+                        <span className="block mt-1 text-[#16A34A] font-mono font-bold">
+                          Supervisor Audit Notes: {app.supervisorNotes}
+                        </span>
+                      )}
                     </p>
                     <p className="text-[11px] text-[#64748B] font-mono">
                       Contact: {app.phone} • {app.email} • Submitted: {app.createdAt}
@@ -908,14 +933,26 @@ export const SupervisorDashboard: React.FC = () => {
 
                   {/* Actions */}
                   <div className="flex sm:flex-col items-stretch gap-2 shrink-0 font-mono">
-                    {app.status !== 'approved' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAppForQuote(app);
+                        setQuoteRateInput(app.quotedRate || (app.packageType === 'micro' ? 120000 : app.packageType === 'commercial' ? 420000 : 980000));
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Zap className="w-4 h-4 fill-white" />
+                      <span>{app.quotedRate ? 'Update Wholesale Quote' : 'Verify & Send Wholesale Quote'}</span>
+                    </button>
+
+                    {app.status !== 'approved' && app.quotedRate && (
                       <button
                         type="button"
                         onClick={() => updateFranchiseStatus(app.id, 'approved')}
-                        className="px-4 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
                       >
                         <Check className="w-4 h-4" />
-                        <span>Approve Wholesale PO</span>
+                        <span>Authorize Hardware PO</span>
                       </button>
                     )}
 
@@ -923,7 +960,7 @@ export const SupervisorDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => updateFranchiseStatus(app.id, 'rejected')}
-                        className="px-4 py-2.5 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#E11D48] text-[#E11D48] hover:bg-[#FFF1F2] text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                        className="px-4 py-2 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#E11D48] text-[#E11D48] hover:bg-[#FFF1F2] text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                       >
                         <XCircle className="w-4 h-4" />
                         <span>Decline Application</span>
@@ -1156,6 +1193,97 @@ export const SupervisorDashboard: React.FC = () => {
             setSelectedChargerForInspect(null);
           }}
         />
+      )}
+
+      {/* Supervisor Wholesale Quotation Modal */}
+      {selectedAppForQuote && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-[#BAE6FD] rounded-card p-6 w-full max-w-lg shadow-2xl space-y-4 font-sans">
+            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+              <div>
+                <h3 className="text-base font-bold text-[#0F172A] font-mono flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#0284C7]" />
+                  <span>Quote Subsidized Wholesale Rate</span>
+                </h3>
+                <p className="text-xs text-[#64748B] font-mono mt-0.5">
+                  Applicant: {selectedAppForQuote.applicantName} ({selectedAppForQuote.packageType.toUpperCase()} Hub)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAppForQuote(null)}
+                className="w-7 h-7 rounded-full border border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[#CBD5E1] text-xs font-mono space-y-1">
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Proposed Location:</span>
+                <strong className="text-[#0F172A]">{selectedAppForQuote.city}</strong>
+              </div>
+              {selectedAppForQuote.lat && (
+                <div className="flex justify-between">
+                  <span className="text-[#64748B]">GPS Coordinates:</span>
+                  <strong className="text-[#0284C7]">{selectedAppForQuote.lat.toFixed(5)}, {selectedAppForQuote.lng?.toFixed(5)}</strong>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Sanctioned Load:</span>
+                <strong className="text-[#0F172A]">{selectedAppForQuote.powerSanctionKw} kW ({selectedAppForQuote.landType})</strong>
+              </div>
+            </div>
+
+            <div className="space-y-3 font-mono text-xs">
+              <div>
+                <label className="font-bold text-[#475569] block mb-1">Quoted Wholesale Package Rate (in ₹ INR) *</label>
+                <input
+                  type="number"
+                  min="50000"
+                  step="5000"
+                  value={quoteRateInput}
+                  onChange={e => setQuoteRateInput(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-sm font-bold text-[#16A34A] focus:outline-none focus:border-[#0284C7]"
+                />
+                <span className="text-[10px] text-[#64748B] mt-0.5 block">Subsidized factory-direct wholesale bulk rate for complete hardware & gateway bundle.</span>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#475569] block mb-1">Supervisor Feasibility & Audit Notes *</label>
+                <textarea
+                  rows={3}
+                  value={quoteNotesInput}
+                  onChange={e => setQuoteNotesInput(e.target.value)}
+                  className="w-full p-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E2E8F0] font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedAppForQuote(null)}
+                className="px-4 py-2 rounded-xl bg-white border border-[#CBD5E1] text-[#64748B]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (quoteRateInput > 0) {
+                    quoteFranchiseApplication(selectedAppForQuote.id, quoteRateInput, quoteNotesInput);
+                    setSelectedAppForQuote(null);
+                  }
+                }}
+                className="px-5 py-2 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold flex items-center gap-1.5 shadow-xs"
+              >
+                <Zap className="w-3.5 h-3.5 fill-white" />
+                <span>Dispatch Wholesale Quotation</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

@@ -272,9 +272,16 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
                     alt={charger.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#BAE6FD] text-[11px] font-mono font-bold text-[#0284C7] flex items-center gap-1 shadow-xs">
-                    <Zap className="w-3 h-3 fill-[#0284C7]" />
-                    <span>{charger.powerKw} kW</span>
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                    <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#BAE6FD] text-[11px] font-mono font-bold text-[#0284C7] flex items-center gap-1 shadow-xs">
+                      <Zap className="w-3 h-3 fill-[#0284C7]" />
+                      <span>{charger.powerKw} kW</span>
+                    </div>
+                    {charger.locationType && (
+                      <span className="bg-white/95 backdrop-blur-md px-2 py-1 rounded-full border border-[#CBD5E1] text-[10px] font-mono font-bold text-[#475569] uppercase shadow-xs">
+                        {charger.locationType}
+                      </span>
+                    )}
                   </div>
 
                   <div className="absolute top-3 right-3 flex items-center gap-1">

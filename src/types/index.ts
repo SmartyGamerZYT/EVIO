@@ -166,12 +166,16 @@ export interface FranchiseApplication {
   phone: string;
   city: string;
   locationAddress: string;
+  lat?: number;
+  lng?: number;
   packageType: 'micro' | 'commercial' | 'highway';
   powerSanctionKw: number;
   landType: 'owned' | 'leased';
-  status: 'submitted' | 'under-review' | 'approved' | 'rejected';
-  estimatedInvestment: number;
-  expectedMonthlyEarnings: number;
+  status: 'submitted' | 'under-review' | 'quotation-sent' | 'approved' | 'rejected';
+  estimatedInvestment?: number;
+  expectedMonthlyEarnings?: number;
+  quotedRate?: number; // Quoted by Supervisor after reviewing location, power feeder, and feasibility
+  supervisorNotes?: string;
   notes?: string;
   createdAt: string;
 }
