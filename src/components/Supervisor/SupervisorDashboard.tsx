@@ -12,24 +12,40 @@ import {
   BarChart3,
   Clock,
   Layers,
-  Search
+  Search,
+  Trash2,
+  MapPin,
+  PlayCircle,
+  PauseCircle,
+  Users,
+  ArrowLeft,
+  Building,
+  ChevronRight,
+  Receipt
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { ChargerListing } from '../../types';
+import { ChargerInspectionModal } from '../Common/ChargerInspectionModal';
 
 export const SupervisorDashboard: React.FC = () => {
   const { 
     chargers, 
     approveChargerListing, 
     rejectChargerListing, 
+    deleteCharger,
+    toggleHostVacation,
     formatCurrency, 
     disputes, 
     resolveDispute,
     bookings
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'grid' | 'disputes' | 'audit'>('pending');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'hubs' | 'grid' | 'disputes' | 'audit'>('all');
+  const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
+  const [selectedChargerForInspect, setSelectedChargerForInspect] = useState<ChargerListing | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [selectedChargerIdForReject, setSelectedChargerIdForReject] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const pendingListings = chargers.filter(c => c.listingStatus === 'pending');
   const liveListings = chargers.filter(c => c.listingStatus === 'live');
@@ -38,6 +54,54 @@ export const SupervisorDashboard: React.FC = () => {
   const totalGridCapacityKw = liveListings.reduce((sum, c) => sum + c.powerKw, 0);
   const currentLoadKw = activeSessions.reduce((sum, b) => sum + (b.activeSession?.flowRateKw || 0), 0);
   const loadPercentage = totalGridCapacityKw > 0 ? ((currentLoadKw / totalGridCapacityKw) * 100).toFixed(1) : '0.0';
+
+  // Distinct Hub hosts from chargers & registrations
+  const uniqueHubs = React.useMemo(() => {
+    const hubMap = new Map<string, {
+      id: string;
+      name: string;
+      email: string;
+      avatar?: string;
+      chargers: typeof chargers;
+      totalCapacityKw: number;
+      pendingCount: number;
+      liveCount: number;
+    }>();
+
+    chargers.forEach(c => {
+      const hid = c.hostId || 'hub-101';
+      if (!hubMap.has(hid)) {
+        hubMap.set(hid, {
+          id: hid,
+          name: c.hostName || 'Hub Host',
+          email: c.hostEmail || `${hid.toLowerCase()}@network.evio`,
+          avatar: c.hostAvatar,
+          chargers: [],
+          totalCapacityKw: 0,
+          pendingCount: 0,
+          liveCount: 0,
+        });
+      }
+      const h = hubMap.get(hid)!;
+      h.chargers.push(c);
+      h.totalCapacityKw += c.powerKw;
+      if (c.listingStatus === 'pending') h.pendingCount += 1;
+      if (c.listingStatus === 'live') h.liveCount += 1;
+    });
+
+    return Array.from(hubMap.values());
+  }, [chargers]);
+
+  const selectedHub = uniqueHubs.find(h => h.id === selectedHubId) || null;
+
+  const filteredAllChargers = chargers.filter(c => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return c.title.toLowerCase().includes(q) || 
+      c.id.toLowerCase().includes(q) || 
+      c.hostName.toLowerCase().includes(q) || 
+      c.approxAddress.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6 font-sans">
@@ -53,12 +117,25 @@ export const SupervisorDashboard: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Supervisor Operations Console</h1>
           <p className="text-xs text-[#64748B] mt-1 font-sans">
-            Oversee NB 777 earthing compliance, review electrical inspection certificates, monitor real-time substation load, and resolve disputes.
+            Full administrative authority over all grid charging nodes: review electrical earthing certificates, balance feeder load, resolve disputes, or delete non-compliant stations.
           </p>
         </div>
 
         {/* Tab Switcher */}
         <div className="flex items-center bg-[#F8FAFC] p-1 rounded-xl border border-[#CBD5E1] text-xs font-mono flex-wrap">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'all' ? 'bg-[#0284C7] text-white shadow-xs' : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>All Chargers Fleet</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+              {chargers.length}
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveTab('pending')}
             className={`px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
@@ -69,6 +146,22 @@ export const SupervisorDashboard: React.FC = () => {
             <span>Safety Approvals</span>
             <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
               {pendingListings.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('hubs');
+              setSelectedHubId(null);
+            }}
+            className={`px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'hubs' ? 'bg-[#0284C7] text-white shadow-xs' : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Hub Operators</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+              {uniqueHubs.length}
             </span>
           </button>
 
@@ -111,35 +204,35 @@ export const SupervisorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
           <div className="flex items-center justify-between text-xs font-mono text-[#64748B] mb-1">
-            <span>Pending Verifications</span>
-            <ShieldCheck className="w-4 h-4 text-[#0284C7]" />
+            <span>Total Network Fleet</span>
+            <Zap className="w-4 h-4 text-[#0284C7]" />
           </div>
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
-            {pendingListings.length} Stations
+            {chargers.length} Stations
           </div>
-          <div className="text-[11px] text-[#0284C7] font-mono mt-1">Requires Safety Sign-Off</div>
+          <div className="text-[11px] text-[#0284C7] font-mono mt-1">{liveListings.length} Live on Map</div>
         </div>
 
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
           <div className="flex items-center justify-between text-xs font-mono text-[#64748B] mb-1">
-            <span>Active Live Nodes</span>
-            <Zap className="w-4 h-4 text-[#16A34A]" />
+            <span>Pending Verifications</span>
+            <ShieldCheck className="w-4 h-4 text-[#D97706]" />
           </div>
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
-            {liveListings.length} Live
+            {pendingListings.length} Pending
           </div>
-          <div className="text-[11px] text-[#16A34A] font-mono mt-1">Total Grid Cap: {totalGridCapacityKw} kW</div>
+          <div className="text-[11px] text-[#D97706] font-mono mt-1">Requires Safety Sign-Off</div>
         </div>
 
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
           <div className="flex items-center justify-between text-xs font-mono text-[#64748B] mb-1">
             <span>Instant Grid Load</span>
-            <Activity className="w-4 h-4 text-[#D97706]" />
+            <Activity className="w-4 h-4 text-[#16A34A]" />
           </div>
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
             {currentLoadKw.toFixed(1)} kW
           </div>
-          <div className="text-[11px] text-[#64748B] font-mono mt-1">{loadPercentage}% Line Saturation</div>
+          <div className="text-[11px] text-[#16A34A] font-mono mt-1">{loadPercentage}% Line Saturation</div>
         </div>
 
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
@@ -150,9 +243,163 @@ export const SupervisorDashboard: React.FC = () => {
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
             {disputes.filter(d => d.status !== 'resolved').length} Pending
           </div>
-          <div className="text-[11px] text-[#16A34A] font-mono mt-1">Arbitration Queue Clear</div>
+          <div className="text-[11px] text-[#64748B] font-mono mt-1">Arbitration Queue</div>
         </div>
       </div>
+
+      {/* TAB 0: ALL CHARGERS FLEET & SUPERVISOR DELETION AUTHORITY */}
+      {activeTab === 'all' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[#0F172A] font-mono flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#0284C7]" />
+                <span>All Grid Charging Stations Authority ({chargers.length})</span>
+              </h2>
+              <p className="text-xs text-[#64748B] font-sans">
+                As a Grid Supervisor, you hold root authority to inspect, approve, or permanently delete any station.
+              </p>
+            </div>
+
+            {/* Search */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by Title, Node ID or Host..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7] focus:bg-white font-sans"
+              />
+            </div>
+          </div>
+
+          {filteredAllChargers.length === 0 ? (
+            <div className="bg-white border border-[#BAE6FD] rounded-card p-12 text-center text-xs text-[#64748B] font-mono shadow-sm">
+              0 stations matching search query.
+            </div>
+          ) : (
+            <div className="bg-white border border-[#BAE6FD] rounded-card overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-[#F8FAFC] text-[#64748B] border-b border-[#E2E8F0] uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Node ID & Photo</th>
+                      <th className="py-3 px-4">Station Title</th>
+                      <th className="py-3 px-4">Host / Operator</th>
+                      <th className="py-3 px-4">Power & Rate</th>
+                      <th className="py-3 px-4">Earthing Safety</th>
+                      <th className="py-3 px-4">Grid Status</th>
+                      <th className="py-3 px-4 text-right">Supervisor Authority</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0]">
+                    {filteredAllChargers.map(charger => (
+                      <tr 
+                        key={charger.id} 
+                        onClick={() => setSelectedChargerForInspect(charger)}
+                        className="hover:bg-[#F0F9FF] transition-colors cursor-pointer group"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <img 
+                              src={charger.photos[0] || 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800'} 
+                              alt="" 
+                              className="w-10 h-10 rounded-lg object-cover border border-[#CBD5E1] group-hover:border-[#0284C7]"
+                            />
+                            <div>
+                              <span className="font-bold text-[#0284C7] block">{charger.id}</span>
+                              <span className="text-[10px] text-[#64748B] font-sans">
+                                {charger.lat.toFixed(3)}, {charger.lng.toFixed(3)}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-[#0F172A] font-sans text-xs group-hover:text-[#0284C7] transition-colors">{charger.title}</div>
+                          <div className="text-[11px] text-[#64748B] truncate max-w-xs">{charger.approxAddress}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-[#0F172A]">{charger.hostName}</div>
+                          <div className="text-[10px] text-[#94A3B8]">{charger.hostEmail || 'host@network'}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-[#0284C7]">{charger.powerKw} kW</span>
+                          <span className="text-[10px] text-[#64748B] block">{formatCurrency(charger.priceRate)}/unit</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-flex items-center gap-1 ${
+                            charger.safetyCertificateVerified ? 'bg-[#DCFCE7] text-[#16A34A]' : 'bg-[#FEF3C7] text-[#D97706]'
+                          }`}>
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>{charger.safetyCertificateVerified ? 'Verified' : 'Pending'}</span>
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            charger.listingStatus === 'live' 
+                              ? 'bg-[#DCFCE7] text-[#16A34A]' 
+                              : charger.listingStatus === 'pending'
+                              ? 'bg-[#FEF3C7] text-[#D97706]'
+                              : 'bg-[#F1F5F9] text-[#64748B]'
+                          }`}>
+                            {charger.listingStatus.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedChargerForInspect(charger);
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] text-xs font-bold flex items-center gap-1 shadow-xs"
+                              title="View past receipts, power graphs & telemetry"
+                            >
+                              <Activity className="w-3.5 h-3.5" />
+                              <span>Graphs & Receipts</span>
+                            </button>
+
+                            {charger.listingStatus === 'pending' && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  approveChargerListing(charger.id);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold shadow-xs flex items-center gap-1"
+                                title="Approve station live"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Approve</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Supervisor Authority: Are you sure you want to permanently delete node [${charger.title}] (${charger.id}) from the network?`)) {
+                                  deleteCharger(charger.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg text-[#E11D48] hover:bg-[#FFE4E6] border border-transparent hover:border-[#FECDD3] transition-all"
+                              title="Delete charger permanently"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* TAB 1: SAFETY APPROVALS */}
       {activeTab === 'pending' && (
@@ -225,6 +472,15 @@ export const SupervisorDashboard: React.FC = () => {
                   {/* Actions */}
                   <div className="flex sm:flex-col lg:flex-row items-center gap-2">
                     <button
+                      type="button"
+                      onClick={() => setSelectedChargerForInspect(charger)}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] font-mono text-xs font-bold transition-all shadow-xs"
+                    >
+                      <Activity className="w-3.5 h-3.5" />
+                      <span>Inspect Graphs & Telemetry</span>
+                    </button>
+
+                    <button
                       onClick={() => approveChargerListing(charger.id)}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-mono text-xs font-bold transition-all shadow-xs"
                     >
@@ -238,6 +494,18 @@ export const SupervisorDashboard: React.FC = () => {
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Reject</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete station [${charger.title}]?`)) {
+                          deleteCharger(charger.id);
+                        }
+                      }}
+                      className="p-2.5 rounded-xl text-[#E11D48] hover:bg-[#FFE4E6] border border-transparent hover:border-[#FECDD3] transition-all"
+                      title="Delete Charger"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -283,6 +551,257 @@ export const SupervisorDashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: HUB OPERATORS / HOSTS DIRECTORY */}
+      {activeTab === 'hubs' && (
+        <div className="space-y-5">
+          {selectedHub ? (
+            /* Selected Hub View - Shows all chargers of that hub! */
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setSelectedHubId(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#CBD5E1] text-[#0284C7] hover:border-[#0284C7] text-xs font-mono font-bold transition-all shadow-xs"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to All Hub Operators</span>
+                </button>
+              </div>
+
+              {/* Hub Profile Banner */}
+              <div className="bg-white border border-[#BAE6FD] rounded-card p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-[#E0F2FE] border border-[#BAE6FD] flex items-center justify-center text-[#0284C7] font-bold text-xl font-mono shrink-0">
+                    <Building className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono font-bold text-[#0284C7] uppercase px-2 py-0.5 rounded bg-[#E0F2FE]">
+                        {selectedHub.id}
+                      </span>
+                      <span className="text-xs text-[#16A34A] font-mono font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Verified Commercial Host</span>
+                      </span>
+                    </div>
+                    <h2 className="text-xl font-bold text-[#0F172A]">{selectedHub.name}</h2>
+                    <p className="text-xs text-[#64748B] font-mono mt-0.5">Contact: {selectedHub.email}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center font-mono">
+                  <div className="p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl">
+                    <span className="text-[10px] text-[#64748B] block uppercase">STATIONS</span>
+                    <span className="text-base font-bold text-[#0F172A] mt-0.5 block">{selectedHub.chargers.length}</span>
+                  </div>
+                  <div className="p-3 bg-[#F0F9FF] border border-[#BAE6FD] rounded-xl">
+                    <span className="text-[10px] text-[#64748B] block uppercase">TOTAL POWER</span>
+                    <span className="text-base font-bold text-[#0284C7] mt-0.5 block">{selectedHub.totalCapacityKw} kW</span>
+                  </div>
+                  <div className="p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl">
+                    <span className="text-[10px] text-[#64748B] block uppercase">LIVE ON GRID</span>
+                    <span className="text-base font-bold text-[#16A34A] mt-0.5 block">{selectedHub.liveCount}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* All Chargers of this Hub */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-[#0F172A] font-mono flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-[#0284C7]" />
+                    <span>All Charging Stations Registered by {selectedHub.name} ({selectedHub.chargers.length})</span>
+                  </h3>
+                  <span className="text-xs text-[#64748B] font-mono">
+                    Click any station to view power graphs and past receipts
+                  </span>
+                </div>
+
+                <div className="bg-white border border-[#BAE6FD] rounded-card overflow-hidden shadow-sm">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-[#F8FAFC] text-[#64748B] border-b border-[#E2E8F0] uppercase text-[10px]">
+                      <tr>
+                        <th className="py-3 px-4">Node ID & Photo</th>
+                        <th className="py-3 px-4">Station Title</th>
+                        <th className="py-3 px-4">Power & Rate</th>
+                        <th className="py-3 px-4">Earthing Safety</th>
+                        <th className="py-3 px-4">Listing Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E2E8F0]">
+                      {selectedHub.chargers.map(charger => (
+                        <tr 
+                          key={charger.id}
+                          onClick={() => setSelectedChargerForInspect(charger)}
+                          className="hover:bg-[#F0F9FF] transition-colors cursor-pointer group"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <img 
+                                src={charger.photos[0] || 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800'} 
+                                alt="" 
+                                className="w-10 h-10 rounded-lg object-cover border border-[#CBD5E1] group-hover:border-[#0284C7]"
+                              />
+                              <div>
+                                <span className="font-bold text-[#0284C7] block">{charger.id}</span>
+                                <span className="text-[10px] text-[#64748B] font-sans">
+                                  {charger.lat.toFixed(3)}, {charger.lng.toFixed(3)}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-[#0F172A] text-xs group-hover:text-[#0284C7]">{charger.title}</div>
+                            <div className="text-[11px] text-[#64748B] truncate max-w-xs">{charger.approxAddress}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-[#0284C7]">{charger.powerKw} kW</span>
+                            <span className="text-[10px] text-[#64748B] block">{formatCurrency(charger.priceRate)}/unit</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-flex items-center gap-1 ${
+                              charger.safetyCertificateVerified ? 'bg-[#DCFCE7] text-[#16A34A]' : 'bg-[#FEF3C7] text-[#D97706]'
+                            }`}>
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>{charger.safetyCertificateVerified ? 'Verified' : 'Pending'}</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              charger.listingStatus === 'live' 
+                                ? 'bg-[#DCFCE7] text-[#16A34A]' 
+                                : charger.listingStatus === 'pending'
+                                ? 'bg-[#FEF3C7] text-[#D97706]'
+                                : 'bg-[#F1F5F9] text-[#64748B]'
+                            }`}>
+                              {charger.listingStatus.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedChargerForInspect(charger);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] text-xs font-bold flex items-center gap-1 shadow-xs"
+                              >
+                                <Activity className="w-3.5 h-3.5" />
+                                <span>Graphs & Receipts</span>
+                              </button>
+
+                              {charger.listingStatus === 'pending' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    approveChargerListing(charger.id);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold shadow-xs flex items-center gap-1"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Supervisor Authority: Are you sure you want to permanently delete node [${charger.title}] (${charger.id})?`)) {
+                                    deleteCharger(charger.id);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-[#E11D48] hover:bg-[#FFE4E6] border border-transparent hover:border-[#FECDD3] transition-all"
+                                title="Delete charger permanently"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Hubs Directory List */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-[#0F172A] font-mono flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#0284C7]" />
+                    <span>Registered Hub Operators & Commercial Hosts ({uniqueHubs.length})</span>
+                  </h2>
+                  <p className="text-xs text-[#64748B] font-mono mt-0.5">
+                    Select any hub to inspect its full charging fleet, power distribution graphs and past receipts.
+                  </p>
+                </div>
+              </div>
+
+              {uniqueHubs.length === 0 ? (
+                <div className="bg-white border border-[#BAE6FD] rounded-card p-12 text-center text-xs text-[#64748B] font-mono shadow-sm">
+                  0 Hub Operators registered on the grid.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {uniqueHubs.map(hub => (
+                    <div
+                      key={hub.id}
+                      onClick={() => setSelectedHubId(hub.id)}
+                      className="bg-white border border-[#BAE6FD] hover:border-[#0284C7] rounded-card p-5 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="px-2 py-0.5 rounded bg-[#E0F2FE] text-[#0284C7] font-mono text-xs font-bold border border-[#BAE6FD]">
+                            {hub.id}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-[#16A34A] bg-[#DCFCE7] px-2 py-0.5 rounded border border-[#86EFAC]">
+                            ACTIVE OPERATOR
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] flex items-center justify-center text-[#0284C7] font-bold text-lg font-mono shrink-0 group-hover:bg-[#0284C7] group-hover:text-white transition-all">
+                            <Building className="w-6 h-6" />
+                          </div>
+                          <div className="overflow-hidden">
+                            <h3 className="font-bold text-sm text-[#0F172A] group-hover:text-[#0284C7] transition-colors truncate">
+                              {hub.name}
+                            </h3>
+                            <p className="text-xs text-[#64748B] font-mono truncate">{hub.email}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#E2E8F0] text-xs font-mono">
+                          <div>
+                            <span className="text-[10px] text-[#94A3B8] block">FLEET STATIONS</span>
+                            <span className="font-bold text-[#0F172A] text-sm">{hub.chargers.length} Chargers</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-[#94A3B8] block">TOTAL CAPACITY</span>
+                            <span className="font-bold text-[#0284C7] text-sm">{hub.totalCapacityKw} kW</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-[#E2E8F0] flex items-center justify-between text-xs font-mono text-[#0284C7] font-bold group-hover:text-[#0369A1]">
+                        <span>View All {hub.chargers.length} Chargers</span>
+                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -399,7 +918,7 @@ export const SupervisorDashboard: React.FC = () => {
               </div>
 
               <button
-                onClick={() => alert('Grid telemetry report downloaded as PDF.')}
+                onClick={() => alert('Grid compliance report exported.')}
                 className="w-full py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs shadow-xs"
               >
                 Export Grid Compliance Log
@@ -490,6 +1009,23 @@ export const SupervisorDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Charger Inspection Modal with Graphs, Past Invoices & Authority Actions */}
+      {selectedChargerForInspect && (
+        <ChargerInspectionModal
+          charger={selectedChargerForInspect}
+          onClose={() => setSelectedChargerForInspect(null)}
+          isSupervisor={true}
+          onApprove={(id) => {
+            approveChargerListing(id);
+            setSelectedChargerForInspect(prev => prev && prev.id === id ? { ...prev, listingStatus: 'live', status: 'available', safetyCertificateVerified: true } : prev);
+          }}
+          onDelete={(id) => {
+            deleteCharger(id);
+            setSelectedChargerForInspect(null);
+          }}
+        />
       )}
 
     </div>

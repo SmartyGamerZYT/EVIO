@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import L from 'leaflet';
 import { 
   X, 
   Upload, 
@@ -8,7 +9,9 @@ import {
   CheckCircle2, 
   ChevronRight, 
   ChevronLeft,
-  FileText
+  FileText,
+  Image as ImageIcon,
+  Navigation
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ConnectorType, PowerTier, PricingType } from '../../types';
@@ -19,7 +22,13 @@ interface ListingWizardModalProps {
 }
 
 export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose, onSuccess }) => {
-  const { currentUser, addChargerListing, formatCurrency } = useApp();
+  const { currentUser, addChargerListing, formatCurrency, userCoords } = useApp();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const certInputRef = useRef<HTMLInputElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const pinMarkerRef = useRef<L.Marker | null>(null);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const totalSteps = 7;
@@ -34,8 +43,118 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
   const [description, setDescription] = useState('');
   const [approxAddress, setApproxAddress] = useState('');
   const [exactAddress, setExactAddress] = useState('');
-  const [lat, setLat] = useState(37.7749);
-  const [lng, setLng] = useState(-122.4194);
+  const [lat, setLat] = useState(userCoords ? userCoords[0] : 37.7749);
+  const [lng, setLng] = useState(userCoords ? userCoords[1] : -122.4194);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Initialize and resize interactive location picker map in Step 2
+  useEffect(() => {
+    if (currentStep !== 2) {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        pinMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (!mapContainerRef.current) return;
+      if (mapInstanceRef.current) return;
+
+      const map = L.map(mapContainerRef.current, {
+        center: [lat, lng],
+        zoom: 14,
+        zoomControl: true,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const pinIcon = L.divIcon({
+        className: 'charger-picker-pin',
+        html: `
+          <div class="relative flex flex-col items-center cursor-move -translate-y-4">
+            <div style="background-color: #0284C7; color: white; box-shadow: 0 4px 10px rgba(2,132,199,0.4);" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold whitespace-nowrap mb-1 border border-white">
+              Station Socket Pin
+            </div>
+            <div class="w-6 h-6 rounded-full bg-[#0284C7] border-2 border-white shadow-lg flex items-center justify-center">
+              <div class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></div>
+            </div>
+          </div>
+        `,
+        iconSize: [120, 50],
+        iconAnchor: [60, 48],
+      });
+
+      const marker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(map);
+      pinMarkerRef.current = marker;
+
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        setLat(Number(pos.lat.toFixed(5)));
+        setLng(Number(pos.lng.toFixed(5)));
+      });
+
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        marker.setLatLng(e.latlng);
+        setLat(Number(e.latlng.lat.toFixed(5)));
+        setLng(Number(e.latlng.lng.toFixed(5)));
+      });
+
+      map.invalidateSize();
+      mapInstanceRef.current = map;
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [currentStep]);
+
+  const handleUseCurrentLocation = () => {
+    if ('geolocation' in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const newLat = Number(pos.coords.latitude.toFixed(5));
+          const newLng = Number(pos.coords.longitude.toFixed(5));
+          setLat(newLat);
+          setLng(newLng);
+          setIsLocating(false);
+          if (mapInstanceRef.current && pinMarkerRef.current) {
+            mapInstanceRef.current.setView([newLat, newLng], 15);
+            pinMarkerRef.current.setLatLng([newLat, newLng]);
+          }
+        },
+        () => {
+          setIsLocating(false);
+          alert('Could not acquire GPS position. Please check your browser location permissions.');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setPhotos(prev => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleCertUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCertificateName(file.name);
+    }
+  };
 
   const [powerKw, setPowerKw] = useState(22);
   const [powerTier, setPowerTier] = useState<PowerTier>('fast');
@@ -44,7 +163,7 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
   const [simultaneousSlots, setSimultaneousSlots] = useState(1);
 
   const [pricingType, setPricingType] = useState<PricingType>('per-kwh');
-  const [priceRate, setPriceRate] = useState(0.32);
+  const [priceRate, setPriceRate] = useState(18.00);
 
   const [is247, setIs247] = useState(true);
   const [selectedDays, setSelectedDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -95,8 +214,9 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
     }
 
     addChargerListing({
-      hostId: currentUser?.id || 'host-local',
-      hostName: currentUser?.name || 'Local Host',
+      hostId: currentUser?.id || 'host-hub-operator',
+      hostName: currentUser?.name || 'Hub Operator',
+      hostEmail: currentUser?.email,
       hostAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
       hostRating: 5.0,
       hostReviewsCount: 0,
@@ -175,64 +295,142 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
               <div>
                 <h3 className="text-lg font-bold text-[#0F172A]">Installation Photos</h3>
                 <p className="text-xs text-[#64748B] mt-1">
-                  Upload at least 2 clear photos: showing the wallbox charger, the plug gun, and the dedicated parking bay.
+                  Upload at least 2 clear photos from your device showing the wallbox charger, the plug gun, and the dedicated parking bay.
                 </p>
               </div>
 
+              {/* Hidden file input */}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                accept="image/*" 
+                multiple 
+                onChange={handleFileUpload} 
+                className="hidden" 
+              />
+
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {photos.map((url, i) => (
-                  <div key={i} className="relative h-28 rounded-xl overflow-hidden border border-[#CBD5E1] group">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  <div key={i} className="relative h-28 rounded-xl overflow-hidden border border-[#CBD5E1] group bg-[#F8FAFC]">
+                    <img src={url} alt={`Station Photo ${i + 1}`} className="w-full h-full object-cover" />
                     <button
+                      type="button"
                       onClick={() => setPhotos(photos.filter((_, idx) => idx !== i))}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xs"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
+                    <span className="absolute bottom-1 left-2 text-[9px] font-mono bg-black/60 text-white px-1.5 py-0.5 rounded">
+                      Photo {i + 1}
+                    </span>
                   </div>
                 ))}
 
-                <div className="h-28 rounded-xl border border-dashed border-[#CBD5E1] hover:border-[#0284C7] flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-colors bg-[#F8FAFC]">
-                  <Upload className="w-5 h-5 text-[#0284C7] mb-1" />
-                  <span className="text-[11px] font-mono text-[#64748B]">Add Image URL</span>
+                {/* Real File Upload Trigger Card */}
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-28 rounded-xl border-2 border-dashed border-[#0284C7]/50 hover:border-[#0284C7] flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-all bg-[#F0F9FF] hover:bg-[#E0F2FE] group"
+                >
+                  <Upload className="w-6 h-6 text-[#0284C7] mb-1.5 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-mono font-bold text-[#0284C7]">Upload from Device</span>
+                  <span className="text-[10px] text-[#64748B] font-mono mt-0.5">Click to choose image files</span>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* Quick sample photo presets for instant testing */}
+              <div className="pt-1">
+                <span className="block text-[10px] font-mono text-[#64748B] uppercase font-bold mb-1.5">
+                  Or add verified EV sample photos in 1 click:
+                </span>
+                <div className="flex flex-wrap gap-2 text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(prev => [...prev, 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800'])}
+                    className="px-2.5 py-1 bg-[#F8FAFC] border border-[#CBD5E1] hover:border-[#0284C7] hover:bg-[#F0F9FF] text-[#0284C7] rounded-lg text-[11px]"
+                  >
+                    + Wallbox Charger
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(prev => [...prev, 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800'])}
+                    className="px-2.5 py-1 bg-[#F8FAFC] border border-[#CBD5E1] hover:border-[#0284C7] hover:bg-[#F0F9FF] text-[#0284C7] rounded-lg text-[11px]"
+                  >
+                    + Charging Bay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(prev => [...prev, 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800'])}
+                    className="px-2.5 py-1 bg-[#F8FAFC] border border-[#CBD5E1] hover:border-[#0284C7] hover:bg-[#F0F9FF] text-[#0284C7] rounded-lg text-[11px]"
+                  >
+                    + Plug Connector
+                  </button>
+                </div>
+              </div>
+
+              {/* Direct image URL input */}
+              <div className="flex gap-2 pt-1">
                 <input
                   type="text"
-                  placeholder="Paste direct image URL..."
+                  placeholder="Or paste direct image URL (https://...)"
                   value={photoInput}
                   onChange={e => setPhotoInput(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] placeholder-[#94A3B8] focus:border-[#0284C7] focus:bg-white"
+                  className="flex-1 px-3 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] placeholder-[#94A3B8] focus:border-[#0284C7] focus:bg-white font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    if (photoInput) {
-                      setPhotos([...photos, photoInput]);
+                    if (photoInput.trim()) {
+                      setPhotos(prev => [...prev, photoInput.trim()]);
                       setPhotoInput('');
                     }
                   }}
                   className="px-4 py-2 bg-white border border-[#CBD5E1] hover:border-[#0284C7] text-[#0284C7] text-xs font-mono font-bold rounded-xl shadow-xs"
                 >
-                  Add Photo
+                  Add URL
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: Location */}
+          {/* STEP 2: Location & Interactive Map Pin */}
           {currentStep === 2 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-bold text-[#0F172A]">Location & Address Privacy</h3>
+                <h3 className="text-lg font-bold text-[#0F172A]">Location & Map Pin Placement</h3>
                 <p className="text-xs text-[#64748B] mt-1">
-                  Public drivers only see an approximate radius. Exact house number is revealed only upon confirmed booking.
+                  Click anywhere on the map or drag the pin to set your charger's exact GPS location. Drivers navigate directly to this pin.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              {/* Interactive Pinning Map */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-[#0F172A] flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#0284C7]" />
+                    <span>Coordinates: {lat.toFixed(5)}, {lng.toFixed(5)}</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    disabled={isLocating}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] font-bold text-xs transition-all shadow-xs"
+                  >
+                    <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                    <span>{isLocating ? 'Acquiring GPS...' : 'Use My Current Location'}</span>
+                  </button>
+                </div>
+
+                <div className="relative w-full h-64 rounded-xl overflow-hidden border border-[#BAE6FD] shadow-xs z-0 isolate">
+                  <div ref={mapContainerRef} className="w-full h-full" />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-[#64748B] font-mono">
+                  <span>Drag pin or click map to reposition socket coordinates</span>
+                  <span className="text-[#0284C7] font-bold">OpenStreetMap Grid</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
                 <div>
                   <label className="text-xs font-mono font-bold text-[#475569] block mb-1">Station Listing Title *</label>
                   <input
@@ -244,26 +442,28 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-mono font-bold text-[#475569] block mb-1">Public Approximate Area (Shown on map) *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Near Central Ave, Financial District"
-                    value={approxAddress}
-                    onChange={e => setApproxAddress(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:border-[#0284C7] focus:bg-white"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-mono font-bold text-[#475569] block mb-1">Public Approximate Area (Shown on map) *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Near Central Ave, Financial District"
+                      value={approxAddress}
+                      onChange={e => setApproxAddress(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:border-[#0284C7] focus:bg-white"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs font-mono font-bold text-[#475569] block mb-1">Exact Address (Revealed post-booking) *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 450 North Central Ave, Bay 4"
-                    value={exactAddress}
-                    onChange={e => setExactAddress(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:border-[#0284C7] focus:bg-white"
-                  />
+                  <div>
+                    <label className="text-xs font-mono font-bold text-[#475569] block mb-1">Exact Address (Revealed post-booking) *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 450 North Central Ave, Bay 4"
+                      value={exactAddress}
+                      onChange={e => setExactAddress(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs text-[#0F172A] focus:border-[#0284C7] focus:bg-white"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -378,9 +578,9 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
                 </label>
                 <input
                   type="number"
-                  step="0.05"
-                  min="0.1"
-                  max="10"
+                  step="0.5"
+                  min="1"
+                  max="200"
                   value={priceRate}
                   onChange={e => setPriceRate(Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl font-mono text-base text-[#0284C7] font-bold focus:border-[#0284C7] focus:bg-white"
@@ -505,10 +705,28 @@ export const ListingWizardModal: React.FC<ListingWizardModalProps> = ({ onClose,
                 </p>
               </div>
 
+              {/* Hidden cert file input */}
+              <input 
+                type="file" 
+                ref={certInputRef} 
+                accept=".pdf,.doc,.docx,image/*" 
+                onChange={handleCertUpload} 
+                className="hidden" 
+              />
+
               <div className="p-4 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] space-y-3">
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#0284C7]">
-                  <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
-                  <span>Licensed Electrician Sign-off Document</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#0284C7]">
+                    <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
+                    <span>Licensed Electrician Sign-off Document</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => certInputRef.current?.click()}
+                    className="text-[11px] font-mono font-bold text-[#0284C7] underline hover:text-[#0369A1]"
+                  >
+                    Upload Document File
+                  </button>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-[#CBD5E1] text-xs shadow-xs">
                   <div className="flex items-center gap-2">

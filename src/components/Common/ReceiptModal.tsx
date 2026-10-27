@@ -6,15 +6,17 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { Booking } from '../../types';
 
 interface ReceiptModalProps {
   onClose: () => void;
+  booking?: Booking | null;
 }
 
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ onClose }) => {
+export const ReceiptModal: React.FC<ReceiptModalProps> = ({ onClose, booking }) => {
   const { currentUser, formatCurrency, bookings } = useApp();
 
-  const latestBooking = bookings[0];
+  const latestBooking = booking || bookings[0];
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans">

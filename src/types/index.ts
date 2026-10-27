@@ -35,6 +35,7 @@ export interface ChargerListing {
   id: string;
   hostId: string;
   hostName: string;
+  hostEmail?: string;
   hostAvatar: string;
   hostRating: number;
   hostReviewsCount: number;

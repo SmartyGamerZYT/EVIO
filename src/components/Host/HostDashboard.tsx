@@ -8,9 +8,22 @@ import {
   Clock, 
   FileText,
   PauseCircle,
-  PlayCircle
+  PlayCircle,
+  AlertCircle,
+  Cpu,
+  Layers,
+  MapPin,
+  Check,
+  Trash2,
+  X,
+  Receipt,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { ChargerListing, Booking } from '../../types';
+import { ReceiptModal } from '../Common/ReceiptModal';
+import { ChargerInspectionModal } from '../Common/ChargerInspectionModal';
 
 interface HostDashboardProps {
   onOpenListingWizard: () => void;
@@ -23,15 +36,28 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
     bookings, 
     formatCurrency, 
     toggleHostVacation, 
-    approveChargerListing
+    approveChargerListing,
+    deleteCharger,
+    acceptBookingRequest,
+    declineBookingRequest
   } = useApp();
 
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month'>('week');
+  const [selectedChargerForDetail, setSelectedChargerForDetail] = useState<ChargerListing | null>(null);
+  const [selectedReceiptBooking, setSelectedReceiptBooking] = useState<Booking | null>(null);
 
-  const hostChargers = chargers.filter(c => c.hostId === currentUser?.id || c.hostId === 'host-101');
-  const primaryCharger = hostChargers[0] || chargers[0];
+  // Filter strictly for chargers listed by this Hub Operator
+  const myChargers = chargers.filter(c => 
+    c.hostId === currentUser?.id || 
+    (c.hostEmail && c.hostEmail === currentUser?.email) ||
+    (currentUser?.id === 'usr-hub-demo' && c.hostId === 'host-101') ||
+    (currentUser?.id === 'usr-multi-hub' && c.hostId === 'host-101')
+  );
 
-  const pendingRequests = bookings.filter(b => b.status === 'requested');
+  // Incoming driver booking requests for this Hub Operator's stations only
+  const pendingRequests = bookings.filter(b => 
+    b.status === 'requested' && myChargers.some(c => c.id === b.chargerId)
+  );
 
   const chartDataWeekly = [
     { label: 'Mon', kwh: 34, earnings: 9.52 },
@@ -43,9 +69,18 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
     { label: 'Sun', kwh: 88, earnings: 24.64 },
   ];
 
-  const totalEarnings = bookings.reduce((sum, b) => sum + (b.totalAmount - b.platformFee), 0) + (hostChargers.length > 0 ? 320.5 : 0);
-  const totalSessions = bookings.length + (hostChargers.length > 0 ? 28 : 0);
-  const totalKwh = bookings.reduce((sum, b) => sum + b.estimatedKwh, 0) + (hostChargers.length > 0 ? 487 : 0);
+  const totalCapacityKw = myChargers.reduce((sum, c) => sum + c.powerKw, 0);
+  const liveCount = myChargers.filter(c => c.listingStatus === 'live').length;
+  const pendingCount = myChargers.filter(c => c.listingStatus === 'pending').length;
+
+  const totalEarnings = bookings
+    .filter(b => myChargers.some(c => c.id === b.chargerId))
+    .reduce((sum, b) => sum + (b.totalAmount - b.platformFee), 0) + (myChargers.length > 0 ? 320.5 : 0);
+
+  const totalSessions = bookings.filter(b => myChargers.some(c => c.id === b.chargerId)).length + (myChargers.length > 0 ? 28 : 0);
+  const totalKwh = bookings
+    .filter(b => myChargers.some(c => c.id === b.chargerId))
+    .reduce((sum, b) => sum + b.estimatedKwh, 0) + (myChargers.length > 0 ? 487 : 0);
 
   return (
     <div className="space-y-6 font-sans">
@@ -56,14 +91,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-pulse"></span>
             <span className="text-xs font-mono font-bold text-[#16A34A] uppercase tracking-wider">
-              Host Operations Dashboard
+              Hub Operator Console
             </span>
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
-            Station Telemetry • {currentUser?.name || 'Local Host'}
+            Station Fleet • {currentUser?.name || 'Hub Host'}
           </h1>
           <p className="text-xs text-[#64748B] mt-1 font-sans">
-            Real-time power monitoring, automated revenue payouts, and charging bay availability controls.
+            Manage your EV charging nodes, authorize driver booking requests, review electrical telemetry, and inspect past station receipts.
           </p>
         </div>
 
@@ -76,77 +111,268 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
         </button>
       </div>
 
-      {/* 3 KPI Cards at Top */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 4 KPI Cards at Top */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* KPI 1: Net Earnings */}
+        {/* KPI 1: Fleet Count */}
         <div className="bg-white border border-[#BAE6FD] rounded-card p-5 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between text-[#64748B] text-xs font-mono font-bold mb-2">
-            <span>NET HOST EARNINGS</span>
+            <span>MY CHARGING FLEET</span>
+            <span className="text-[#0284C7] font-mono">{liveCount} Live</span>
+          </div>
+          <div className="font-mono text-[30px] font-bold text-[#0F172A] tracking-tight">
+            {myChargers.length} {myChargers.length === 1 ? 'Station' : 'Stations'}
+          </div>
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-[#64748B] font-mono">
+            <span className="text-[#D97706] font-bold">{pendingCount}</span>
+            <span>Awaiting supervisor approval</span>
+          </div>
+        </div>
+
+        {/* KPI 2: Total Power Capacity */}
+        <div className="bg-white border border-[#BAE6FD] rounded-card p-5 relative overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono font-bold mb-2">
+            <span>TOTAL CAPACITY</span>
+            <Zap className="w-4 h-4 text-[#16A34A]" />
+          </div>
+          <div className="font-mono text-[30px] font-bold text-[#16A34A] tracking-tight">
+            {totalCapacityKw} kW
+          </div>
+          <div className="mt-2 text-xs text-[#64748B] font-mono">
+            Combined grid capacity
+          </div>
+        </div>
+
+        {/* KPI 3: Net Earnings */}
+        <div className="bg-white border border-[#BAE6FD] rounded-card p-5 relative overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono font-bold mb-2">
+            <span>NET EARNINGS</span>
             <span className="text-[#16A34A] font-mono">+14.2%</span>
           </div>
-          <div className="font-mono text-[32px] font-bold text-[#0F172A] tracking-tight">
+          <div className="font-mono text-[30px] font-bold text-[#0F172A] tracking-tight">
             {formatCurrency(totalEarnings)}
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-[#64748B] font-mono">
-            <span className="text-[#0284C7] font-bold">10%</span>
-            <span>Network operation take rate auto-deducted</span>
+          <div className="mt-2 text-xs text-[#64748B] font-mono">
+            After 10% network operations fee
           </div>
         </div>
 
-        {/* KPI 2: Total Sessions */}
+        {/* KPI 4: Sessions & Energy */}
         <div className="bg-white border border-[#BAE6FD] rounded-card p-5 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between text-[#64748B] text-xs font-mono font-bold mb-2">
-            <span>CHARGING SESSIONS</span>
-            <span className="text-[#0284C7] font-mono">99.1% Uptime</span>
+            <span>SESSIONS DISPENSED</span>
+            <Clock className="w-4 h-4 text-[#0284C7]" />
           </div>
-          <div className="font-mono text-[32px] font-bold text-[#0284C7] tracking-tight">
+          <div className="font-mono text-[30px] font-bold text-[#0284C7] tracking-tight">
             {totalSessions}
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-[#64748B] font-mono">
-            <Clock className="w-3.5 h-3.5 text-[#64748B]" />
-            <span>Average session time: 1.6 hours</span>
-          </div>
-        </div>
-
-        {/* KPI 3: Energy Delivered */}
-        <div className="bg-white border border-[#BAE6FD] rounded-card p-5 relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono font-bold mb-2">
-            <span>DISPENSED ENERGY (kWh)</span>
-            <span className="text-[#16A34A] font-mono">Level 2 / DC</span>
-          </div>
-          <div className="font-mono text-[32px] font-bold text-[#16A34A] tracking-tight">
-            {totalKwh.toFixed(1)} <span className="text-xl font-normal text-[#64748B]">kWh</span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-[#64748B] font-mono">
-            <Zap className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span>Avoided ~389 kg CO2 emissions</span>
+          <div className="mt-2 text-xs text-[#64748B] font-mono">
+            {totalKwh} kWh delivered
           </div>
         </div>
 
       </div>
 
-      {/* Main Grid: 8 Columns Chart + 4 Columns Controls */}
+      {/* DEDICATED SECTION: ALL CHARGERS LISTED BY ME (FLEET) */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#0F172A] font-mono flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[#0284C7]" />
+              <span>All Stations Listed by Me ({myChargers.length})</span>
+            </h2>
+            <p className="text-xs text-[#64748B] font-sans">
+              Click any station card to inspect full details, past session usages, and tax invoices.
+            </p>
+          </div>
+
+          <button
+            onClick={onOpenListingWizard}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-mono font-bold transition-all shadow-xs self-start sm:self-auto"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>Add Another Charger</span>
+          </button>
+        </div>
+
+        {myChargers.length === 0 ? (
+          <div className="bg-white border border-[#BAE6FD] rounded-card p-12 text-center text-xs text-[#64748B] font-mono shadow-sm space-y-4">
+            <AlertCircle className="w-10 h-10 text-[#0284C7] mx-auto opacity-70" />
+            <div>
+              <p className="font-bold text-base text-[#0F172A]">You Have Not Listed Any Chargers Yet</p>
+              <p className="font-sans text-xs text-[#64748B] mt-1 max-w-md mx-auto">
+                Turn your home wallbox, commercial parking lot, or garage socket into an active income stream on the Evio charging grid.
+              </p>
+            </div>
+            <button
+              onClick={onOpenListingWizard}
+              className="px-6 py-2.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-mono font-bold text-xs shadow-xs"
+            >
+              List My First Charger
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {myChargers.map(charger => (
+              <div 
+                key={charger.id}
+                onClick={() => setSelectedChargerForDetail(charger)}
+                className="bg-white border border-[#BAE6FD] hover:border-[#0284C7] rounded-card overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group"
+              >
+                {/* Station Photo Header */}
+                <div className="relative h-44 bg-[#F1F5F9] overflow-hidden">
+                  <img 
+                    src={charger.photos[0] || 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800'} 
+                    alt={charger.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#BAE6FD] text-[11px] font-mono font-bold text-[#0284C7] flex items-center gap-1 shadow-xs">
+                    <Zap className="w-3 h-3 fill-[#0284C7]" />
+                    <span>{charger.powerKw} kW</span>
+                  </div>
+
+                  <div className="absolute top-3 right-3 flex items-center gap-1">
+                    {/* Listing Status Badge */}
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold shadow-xs ${
+                      charger.listingStatus === 'live'
+                        ? 'bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC]'
+                        : charger.listingStatus === 'pending'
+                        ? 'bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]'
+                        : 'bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1]'
+                    }`}>
+                      {charger.listingStatus === 'live' ? 'LIVE ON GRID' : charger.listingStatus === 'pending' ? 'PENDING APPROVAL' : 'PAUSED'}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-2 right-2 text-[10px] font-mono bg-black/60 text-white px-2 py-0.5 rounded">
+                    {charger.id}
+                  </div>
+                </div>
+
+                {/* Body Details */}
+                <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-sm text-[#0F172A] line-clamp-1 group-hover:text-[#0284C7] transition-colors">{charger.title}</h3>
+                    <p className="text-xs text-[#64748B] flex items-center gap-1 mt-1 font-mono">
+                      <MapPin className="w-3 h-3 text-[#0284C7] shrink-0" />
+                      <span className="truncate">{charger.approxAddress}</span>
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#E2E8F0] text-xs font-mono">
+                      <div>
+                        <span className="text-[10px] text-[#94A3B8] block">CONNECTORS</span>
+                        <span className="font-bold text-[#0F172A] truncate block">{charger.connectorTypes.join(', ')}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#94A3B8] block">PRICING RATE</span>
+                        <span className="font-bold text-[#0284C7]">
+                          {formatCurrency(charger.priceRate)}/{charger.pricingType === 'per-kwh' ? 'kWh' : 'hr'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-[#64748B]">
+                      <div className="flex items-center gap-1.5 truncate max-w-[180px]">
+                        <FileText className="w-3 h-3 text-[#0284C7] shrink-0" />
+                        <span className="truncate">{charger.safetyCertificateName || 'Electrical_Earthing.pdf'}</span>
+                      </div>
+                      <span className={`text-[10px] font-bold ${charger.safetyCertificateVerified ? 'text-[#16A34A]' : 'text-[#D97706]'}`}>
+                        {charger.safetyCertificateVerified ? 'Verified' : 'In Review'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="pt-3 border-t border-[#E2E8F0] space-y-2">
+                    <div className="flex items-center gap-2 font-mono text-xs">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleHostVacation(charger.id);
+                        }}
+                        className={`flex-1 p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+                          charger.listingStatus === 'live'
+                            ? 'bg-[#DCFCE7] border-[#86EFAC] text-[#16A34A]'
+                            : 'bg-[#F8FAFC] border-[#CBD5E1] text-[#64748B]'
+                        }`}
+                        title="Set station live for drivers"
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" />
+                        <span>{charger.listingStatus === 'live' ? 'Live' : 'Set Live'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleHostVacation(charger.id);
+                        }}
+                        className={`flex-1 p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+                          charger.listingStatus === 'paused'
+                            ? 'bg-[#FEF3C7] border-[#FDE68A] text-[#D97706]'
+                            : 'bg-[#F8FAFC] border-[#CBD5E1] text-[#64748B]'
+                        }`}
+                        title="Temporarily pause station availability"
+                      >
+                        <PauseCircle className="w-3.5 h-3.5" />
+                        <span>Pause</span>
+                      </button>
+
+                      {/* Delete Charger Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to permanently delete station [${charger.title}]?`)) {
+                            deleteCharger(charger.id);
+                          }
+                        }}
+                        className="p-2 rounded-xl text-[#E11D48] hover:bg-[#FFE4E6] border border-[#CBD5E1] hover:border-[#FECDD3] transition-all"
+                        title="Delete Station"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Pending Supervisor Verification Notice */}
+                    {charger.listingStatus === 'pending' && (
+                      <div className="w-full py-1.5 px-2 rounded-lg bg-[#FEF3C7] border border-[#FDE68A] text-[#D97706] font-mono text-[10px] font-bold text-center flex items-center justify-center gap-1.5">
+                        <Clock className="w-3 h-3" />
+                        <span>Awaiting Supervisor Safety Approval</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Grid Telemetry & Power Distribution Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* 8-Column Main Area Chart */}
-        <div className="lg:col-span-8 bg-white border border-[#BAE6FD] rounded-card p-6 flex flex-col justify-between shadow-sm">
+        {/* 8-Column SVG Area Chart */}
+        <div className="lg:col-span-8 bg-white border border-[#BAE6FD] rounded-card p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <div>
-                <h3 className="text-lg font-bold text-[#0F172A]">Energy Consumption & Revenue Trajectory</h3>
-                <p className="text-xs text-[#64748B] font-mono">Daily kWh delivered vs net revenue earnings</p>
+                <h3 className="text-base font-bold text-[#0F172A] font-mono flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#0284C7]" />
+                  <span>Real-Time Power Delivery (kWh)</span>
+                </h3>
+                <p className="text-xs text-[#64748B] font-mono">Telemetry aggregate across your charging bays</p>
               </div>
 
-              {/* Timeframe switch */}
-              <div className="flex items-center bg-[#F8FAFC] p-1 rounded-xl border border-[#CBD5E1] text-xs font-mono">
+              <div className="flex items-center bg-[#F8FAFC] p-1 rounded-xl border border-[#CBD5E1] text-xs font-mono self-start sm:self-auto">
                 {(['day', 'week', 'month'] as const).map(tf => (
                   <button
                     key={tf}
                     onClick={() => setTimeframe(tf)}
-                    className={`px-3 py-1 rounded-lg uppercase font-bold transition-all ${
-                      timeframe === tf
-                        ? 'bg-white text-[#0284C7] shadow-xs border border-[#BAE6FD]' 
+                    className={`px-3 py-1 rounded-lg capitalize transition-all ${
+                      timeframe === tf 
+                        ? 'bg-[#0284C7] text-white font-bold shadow-xs' 
                         : 'text-[#64748B] hover:text-[#0F172A]'
                     }`}
                   >
@@ -156,24 +382,22 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
               </div>
             </div>
 
-            {/* SVG Area Chart in Sky Blue */}
-            <div className="h-64 w-full relative">
-              <svg className="w-full h-full" viewBox="0 0 700 240" preserveAspectRatio="none">
+            {/* SVG Chart */}
+            <div className="w-full h-56 pt-2">
+              <svg viewBox="0 0 700 220" className="w-full h-full overflow-visible">
                 <defs>
                   <linearGradient id="areaGradientLight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0284C7" stopOpacity="0.3" />
-                    <stop offset="60%" stopColor="#38BDF8" stopOpacity="0.1" />
-                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                    <stop offset="0%" stopColor="#0284C7" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
 
-                {/* Grid lines in #E2E8F0 */}
-                <line x1="0" y1="40" x2="700" y2="40" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="100" x2="700" y2="100" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="160" x2="700" y2="160" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="220" x2="700" y2="220" stroke="#E2E8F0" strokeWidth="1" />
+                {/* Grid guidelines */}
+                <line x1="0" y1="40" x2="700" y2="40" stroke="#E2E8F0" strokeDasharray="3,3" />
+                <line x1="0" y1="100" x2="700" y2="100" stroke="#E2E8F0" strokeDasharray="3,3" />
+                <line x1="0" y1="160" x2="700" y2="160" stroke="#E2E8F0" strokeDasharray="3,3" />
 
-                {/* Area Polygon */}
+                {/* Area Path */}
                 <polygon
                   points="
                     0,220
@@ -189,7 +413,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
                   fill="url(#areaGradientLight)"
                 />
 
-                {/* Line Path #0284C7 */}
+                {/* Line Path */}
                 <polyline
                   fill="none"
                   stroke="#0284C7"
@@ -227,7 +451,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
                 ))}
               </svg>
 
-              {/* X Axis Labels */}
+              {/* X Axis */}
               <div className="flex justify-between text-[11px] font-mono text-[#64748B] pt-2 px-1">
                 {chartDataWeekly.map(d => (
                   <div key={d.label} className="text-center">
@@ -245,98 +469,49 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           </div>
         </div>
 
-        {/* 4-Column Controls & Incoming Requests */}
+        {/* 4-Column Requests & Safety */}
         <div className="lg:col-span-4 space-y-5">
           
-          {/* Node Availability Toggle */}
-          <div className="bg-white border border-[#BAE6FD] rounded-card p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-mono font-bold text-[#64748B] tracking-wider">Station Status</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                primaryCharger?.listingStatus === 'live' 
-                  ? 'bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC]' 
-                  : 'bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]'
-              }`}>
-                {primaryCharger ? primaryCharger.listingStatus.toUpperCase() : 'NO CHARGER'}
-              </span>
-            </div>
-
-            {primaryCharger ? (
-              <div>
-                <h4 className="text-sm font-bold text-[#0F172A]">{primaryCharger.title}</h4>
-                <p className="text-xs text-[#64748B] mt-0.5 font-sans">{primaryCharger.approxAddress}</p>
-                <div className="grid grid-cols-2 gap-2 pt-3 font-mono">
-                  <button
-                    onClick={() => toggleHostVacation(primaryCharger.id)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                      primaryCharger.listingStatus === 'live'
-                        ? 'bg-[#DCFCE7] border-[#86EFAC] text-[#16A34A]'
-                        : 'bg-[#F8FAFC] border-[#CBD5E1] text-[#64748B]'
-                    }`}
-                  >
-                    <PlayCircle className="w-3.5 h-3.5" />
-                    <span>In Service</span>
-                  </button>
-
-                  <button
-                    onClick={() => toggleHostVacation(primaryCharger.id)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                      primaryCharger.listingStatus === 'paused'
-                        ? 'bg-[#FEF3C7] border-[#FDE68A] text-[#D97706]'
-                        : 'bg-[#F8FAFC] border-[#CBD5E1] text-[#64748B]'
-                    }`}
-                  >
-                    <PauseCircle className="w-3.5 h-3.5" />
-                    <span>Vacation Mode</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-center text-xs text-[#64748B]">
-                <p>No active charging bay listed yet.</p>
-                <button
-                  onClick={onOpenListingWizard}
-                  className="mt-2 text-[#0284C7] underline font-mono font-bold"
-                >
-                  List My Charger
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Incoming Driver Requests */}
+          {/* Incoming Driver Requests - Approvals dictate when slot is confirmed */}
           <div className="bg-white border border-[#BAE6FD] rounded-card p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase font-mono font-bold text-[#64748B] tracking-wider">Driver Requests</span>
-              <span className="text-[10px] font-mono font-bold text-[#0284C7]">{pendingRequests.length} pending</span>
+              <span className="text-[10px] font-mono font-bold text-[#0284C7]">{pendingRequests.length} pending approval</span>
             </div>
 
             {pendingRequests.length === 0 ? (
               <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-center text-xs text-[#64748B]">
                 <CheckCircle2 className="w-6 h-6 text-[#16A34A] mx-auto mb-2 opacity-80" />
-                <p>Zero pending requests.</p>
-                <p className="text-[11px] mt-1 text-[#94A3B8] font-mono">Instant auto-approval active.</p>
+                <p>Zero pending booking requests.</p>
+                <p className="text-[11px] mt-1 text-[#94A3B8] font-mono">Incoming driver slots appear here for host acceptance.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {pendingRequests.map(req => (
-                  <div key={req.id} className="p-3 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] space-y-2 font-mono">
+                  <div key={req.id} className="p-3.5 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] space-y-2 font-mono">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-[#0F172A]">{req.driverName}</span>
                       <span className="text-[#0284C7] font-bold">{formatCurrency(req.totalAmount)}</span>
                     </div>
                     <div className="text-[11px] text-[#64748B]">
-                      {req.driverVehicle} • {req.durationHours}h ({req.startTime})
+                      Station: <strong className="text-[#0F172A]">{req.chargerTitle}</strong>
+                    </div>
+                    <div className="text-[11px] text-[#64748B]">
+                      {req.driverVehicle} • {req.durationHours}h slot ({req.startTime})
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       <button
-                        onClick={() => approveChargerListing(req.chargerId)}
-                        className="flex-1 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs shadow-xs"
+                        type="button"
+                        onClick={() => acceptBookingRequest(req.id)}
+                        className="flex-1 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1"
                       >
-                        Accept
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Accept Slot</span>
                       </button>
                       <button
-                        className="px-3 py-1.5 rounded-lg bg-[#F8FAFC] border border-[#CBD5E1] text-[#DC2626] text-xs font-semibold"
+                        type="button"
+                        onClick={() => declineBookingRequest(req.id)}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-[#CBD5E1] hover:bg-[#FFE4E6] text-[#DC2626] text-xs font-semibold transition-all"
                       >
                         Decline
                       </button>
@@ -351,14 +526,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           <div className="bg-white border border-[#BAE6FD] rounded-card p-5 space-y-3 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold text-[#0F172A]">
               <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
-              <span className="font-mono">Electrical Safety Certified</span>
+              <span className="font-mono">Electrical Safety Compliant</span>
             </div>
             <p className="text-xs text-[#64748B] leading-relaxed">
-              Ground earthing resistance under 5 Ohms. High-speed Type B RCD surge protection verified.
+              Ground earthing resistance under 5 Ohms. High-speed Type B RCD surge protection verified for all live bays.
             </p>
             <div className="text-[11px] font-mono text-[#0284C7] flex items-center gap-1 font-semibold">
               <FileText className="w-3.5 h-3.5" />
-              <span>Safety_Inspection_Approval_2026.pdf</span>
+              <span>Certified_Inspection_Approval_2026.pdf</span>
             </div>
           </div>
 
@@ -366,13 +541,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
 
       </div>
 
-      {/* Table: Recent Sessions */}
+      {/* Table: Chronological Sessions Log */}
       <div className="bg-white border border-[#BAE6FD] rounded-card p-6 shadow-sm">
         <h3 className="text-lg font-bold text-[#0F172A] mb-4">Chronological Session Log & Payouts</h3>
         
-        {bookings.length === 0 ? (
+        {bookings.filter(b => myChargers.some(c => c.id === b.chargerId)).length === 0 ? (
           <div className="p-8 text-center text-xs text-[#64748B] border border-dashed border-[#CBD5E1] rounded-xl font-mono">
-            No charging sessions recorded in this billing cycle.
+            No charging sessions recorded for your stations in this billing cycle.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -380,45 +555,80 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
               <thead>
                 <tr className="border-b border-[#E2E8F0] text-[#64748B] uppercase text-[10px] font-mono tracking-wider">
                   <th className="pb-3 font-semibold">Session ID</th>
+                  <th className="pb-3 font-semibold">Station</th>
                   <th className="pb-3 font-semibold">Driver & Vehicle</th>
                   <th className="pb-3 font-semibold">Duration & Energy</th>
                   <th className="pb-3 font-semibold">Status</th>
                   <th className="pb-3 font-semibold text-right">Net Payout</th>
+                  <th className="pb-3 font-semibold text-right">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
-                {bookings.map(b => (
-                  <tr key={b.id} className="hover:bg-[#F0F9FF] transition-colors">
-                    <td className="py-3 font-mono text-[#0284C7] font-bold">{b.id}</td>
-                    <td className="py-3">
-                      <div className="font-bold text-[#0F172A]">{b.driverName}</div>
-                      <div className="text-[11px] text-[#64748B] font-mono">{b.driverVehicle}</div>
-                    </td>
-                    <td className="py-3 font-mono">
-                      <span className="text-[#0F172A] font-semibold">{b.durationHours}h</span>
-                      <span className="text-[#64748B] ml-2">({b.estimatedKwh} kWh)</span>
-                    </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                        b.status === 'active' 
-                          ? 'bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC]'
-                          : b.status === 'completed'
-                          ? 'bg-[#F1F5F9] text-[#475569]'
-                          : 'bg-[#FEF3C7] text-[#D97706]'
-                      }`}>
-                        {b.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right font-mono font-bold text-[#0F172A]">
-                      {formatCurrency(b.totalAmount - b.platformFee)}
-                    </td>
-                  </tr>
-                ))}
+                {bookings
+                  .filter(b => myChargers.some(c => c.id === b.chargerId))
+                  .map(b => (
+                    <tr key={b.id} className="hover:bg-[#F0F9FF] transition-colors">
+                      <td className="py-3 font-mono text-[#0284C7] font-bold">{b.id}</td>
+                      <td className="py-3 font-medium text-[#0F172A]">{b.chargerTitle}</td>
+                      <td className="py-3">
+                        <div className="font-bold text-[#0F172A]">{b.driverName}</div>
+                        <div className="text-[11px] text-[#64748B] font-mono">{b.driverVehicle}</div>
+                      </td>
+                      <td className="py-3 font-mono">
+                        <span className="text-[#0F172A] font-semibold">{b.durationHours}h</span>
+                        <span className="text-[#64748B] ml-2">({b.estimatedKwh} kWh)</span>
+                      </td>
+                      <td className="py-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                          b.status === 'active' 
+                            ? 'bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC]'
+                            : b.status === 'completed'
+                            ? 'bg-[#F1F5F9] text-[#475569]'
+                            : b.status === 'requested'
+                            ? 'bg-[#FEF3C7] text-[#D97706]'
+                            : 'bg-[#F8FAFC] text-[#64748B]'
+                        }`}>
+                          {b.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right font-mono font-bold text-[#0F172A]">
+                        {formatCurrency(b.totalAmount - b.platformFee)}
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => setSelectedReceiptBooking(b)}
+                          className="px-2.5 py-1 rounded-lg bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] font-mono text-[11px] font-bold transition-all inline-flex items-center gap-1"
+                        >
+                          <Receipt className="w-3 h-3" />
+                          <span>Invoice</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* MODAL: SPECIFIC CHARGER DETAIL, PAST RECEIPTS & POWER GRAPHS */}
+      {selectedChargerForDetail && (
+        <ChargerInspectionModal
+          charger={selectedChargerForDetail}
+          onClose={() => setSelectedChargerForDetail(null)}
+          isSupervisor={false}
+          onDelete={(id) => deleteCharger(id)}
+          onTogglePause={(id) => toggleHostVacation(id)}
+        />
+      )}
+
+      {/* PRINTABLE RECEIPT MODAL */}
+      {selectedReceiptBooking && (
+        <ReceiptModal
+          booking={selectedReceiptBooking}
+          onClose={() => setSelectedReceiptBooking(null)}
+        />
+      )}
 
     </div>
   );

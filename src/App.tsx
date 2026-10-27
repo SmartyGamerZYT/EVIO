@@ -71,6 +71,7 @@ const MainApp: React.FC = () => {
             ) : (
               <DriverView 
                 onOpenActiveSession={() => setShowActiveSession(true)} 
+                onNavigateToBookings={() => setCurrentTab('bookings')}
               />
             )}
           </>

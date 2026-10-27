@@ -30,7 +30,7 @@ export const SEED_CALIBRATION_CHARGERS: ChargerListing[] = [
     cableLengthMeters: 7.5,
     simultaneousSlots: 1,
     pricingType: 'per-kwh',
-    priceRate: 0.28, // $0.28 per kWh
+    priceRate: 18.00, // ₹18.00 per kWh
     safetyCertificateName: 'Certified_Electrical_Safety_Report_2026.pdf',
     safetyCertificateVerified: true,
     schedule: {
@@ -68,7 +68,7 @@ export const SEED_CALIBRATION_CHARGERS: ChargerListing[] = [
     cableLengthMeters: 5.0,
     simultaneousSlots: 1,
     pricingType: 'per-kwh',
-    priceRate: 0.42, // $0.42 per kWh
+    priceRate: 24.00, // ₹24.00 per kWh
     safetyCertificateName: 'High_Voltage_DC_Safety_Approval.pdf',
     safetyCertificateVerified: true,
     schedule: {

@@ -33,7 +33,7 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [selectedDuration, setSelectedDuration] = useState<number>(1.5);
-  const [selectedSlotTime, setSelectedSlotTime] = useState<string>('Now (Instant Plug-in)');
+  const [selectedSlotTime, setSelectedSlotTime] = useState<string>('Today, 02:00 PM - 03:00 PM');
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'upi' | 'card'>('wallet');
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -242,10 +242,15 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
               <div className="space-y-2">
                 <label className="text-xs font-mono font-bold text-[#0F172A] flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>Select Arrival Window</span>
+                  <span>Select Scheduled Charging Slot</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['Now (Instant Plug-in)', 'In 30 Mins', 'Today, 03:00 PM', 'Today, 06:30 PM'].map(slot => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    'Today, 02:00 PM - 03:00 PM',
+                    'Today, 04:30 PM - 05:30 PM',
+                    'Today, 07:00 PM - 08:00 PM',
+                    'Tomorrow, 09:30 AM - 10:30 AM'
+                  ].map(slot => (
                     <button
                       key={slot}
                       type="button"
@@ -378,10 +383,10 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
                     <span>{bookingError}</span>
                     {bookingError.includes('Insufficient') && (
                       <button
-                        onClick={() => topUpWallet(50)}
+                        onClick={() => topUpWallet(500)}
                         className="underline font-bold text-[#0F172A] ml-2"
                       >
-                        + Add $50
+                        + Add ₹500
                       </button>
                     )}
                   </div>
@@ -397,9 +402,7 @@ export const ChargerDetailModal: React.FC<ChargerDetailModalProps> = ({
               className="w-full py-3.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white font-mono font-bold text-xs tracking-wider shadow-md shadow-[#0284C7]/25 active:scale-98 transition-all flex items-center justify-center gap-2"
             >
               <Zap className="w-4 h-4 fill-white" />
-              <span>
-                {charger.bookingMode === 'instant' ? 'CONFIRM & START CHARGING' : 'REQUEST HOST APPROVAL'}
-              </span>
+              <span>REQUEST SLOT APPROVAL FROM HUB</span>
             </button>
 
           </div>

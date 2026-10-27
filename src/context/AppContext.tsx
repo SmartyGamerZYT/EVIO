@@ -28,6 +28,7 @@ interface AppContextType {
   loadSeedChargers: () => void;
   clearAllChargers: () => void;
   addChargerListing: (newCharger: Omit<ChargerListing, 'id' | 'createdAt' | 'status' | 'listingStatus'>) => ChargerListing;
+  deleteCharger: (chargerId: string) => void;
   updateChargerStatus: (chargerId: string, status: ChargerListing['status']) => void;
   approveChargerListing: (chargerId: string) => void;
   rejectChargerListing: (chargerId: string, reason: string) => void;
@@ -41,6 +42,9 @@ interface AppContextType {
     estimatedKwh: number,
     paymentMethod: 'wallet' | 'upi' | 'card'
   ) => { success: boolean; error?: string; booking?: Booking };
+  acceptBookingRequest: (bookingId: string) => void;
+  declineBookingRequest: (bookingId: string) => void;
+  startChargingSession: (bookingId: string) => void;
   activeBooking: Booking | null;
   stopActiveSession: () => void;
   topUpWallet: (amount: number) => void;
@@ -62,7 +66,7 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     role: 'driver',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
     isVerified: true,
-    walletBalance: 85.0,
+    walletBalance: 2500.0,
     vehicle: {
       make: 'Tesla',
       model: 'Model Y Long Range',
@@ -80,7 +84,7 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     role: 'hub',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     isVerified: true,
-    walletBalance: 420.0,
+    walletBalance: 15400.0,
   },
   {
     id: 'usr-supervisor-demo',
@@ -104,7 +108,7 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     role: 'driver',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     isVerified: true,
-    walletBalance: 120.0,
+    walletBalance: 2800.0,
     vehicle: {
       make: 'Hyundai',
       model: 'Ioniq 5',
@@ -122,7 +126,7 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     role: 'hub',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     isVerified: true,
-    walletBalance: 650.0,
+    walletBalance: 18500.0,
   },
   {
     id: 'usr-multi-supervisor',
@@ -151,7 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [userCoords, setUserCoords] = useState<[number, number]>([37.7749, -122.4194]);
-  const [currency, setCurrency] = useState<Currency>('USD');
+  const [currency, setCurrency] = useState<Currency>('INR');
 
   const [chargers, setChargers] = useState<ChargerListing[]>(() => {
     const saved = localStorage.getItem('evio_chargers');
@@ -288,13 +292,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     switch (currency) {
       case 'EUR':
         return `€${amount.toFixed(2)}`;
-      case 'INR':
-        return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      case 'USD':
+        return `$${amount.toFixed(2)}`;
       case 'GBP':
         return `£${amount.toFixed(2)}`;
-      case 'USD':
+      case 'INR':
       default:
-        return `$${amount.toFixed(2)}`;
+        return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
     }
   };
 
@@ -352,6 +356,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
 
     return newCharger;
+  };
+
+  const deleteCharger = (chargerId: string) => {
+    setChargers(prev => prev.filter(c => c.id !== chargerId));
+    setBookings(prev => prev.map(b => b.chargerId === chargerId ? { ...b, status: 'cancelled' } : b));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Station Deleted',
+        desc: `Charging node ${chargerId} permanently removed from the system.`,
+        time: 'Just now',
+        read: false
+      },
+      ...prev
+    ]);
   };
 
   const updateChargerStatus = (chargerId: string, status: ChargerListing['status']) => {
@@ -437,30 +457,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       estimatedKwh,
       totalAmount,
       platformFee,
-      status: charger.bookingMode === 'instant' ? 'active' : 'requested',
+      status: 'requested', // Driver booking sends request to Hub; slot is booked once Hub accepts
       paymentMethod,
       paymentStatus: 'paid',
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      activeSession: charger.bookingMode === 'instant' ? {
-        startedAt: new Date().toISOString(),
-        currentKwh: 1.2,
-        currentCost: Number((1.2 * charger.priceRate).toFixed(2)),
-        batteryPercentage: 42,
-        flowRateKw: charger.powerKw,
-      } : undefined
     };
 
     setBookings(prev => [newBooking, ...prev]);
 
-    if (charger.bookingMode === 'instant') {
-      updateChargerStatus(charger.id, 'in-use');
-    }
-
     setNotifications(prev => [
       {
         id: `notif-${Date.now()}`,
-        title: charger.bookingMode === 'instant' ? 'Session Activated' : 'Booking Request Logged',
-        desc: `Station: ${charger.title}. Duration: ${durationHours}h. Total: ${formatCurrency(totalAmount)}.`,
+        title: 'Booking Request Sent to Hub',
+        desc: `Request for [${charger.title}] sent to host ${charger.hostName}. Slot will be confirmed upon host acceptance.`,
         time: 'Just now',
         read: false
       },
@@ -468,6 +477,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
 
     return { success: true, booking: newBooking };
+  };
+
+  const acceptBookingRequest = (bookingId: string) => {
+    const target = bookings.find(b => b.id === bookingId);
+    if (!target) return;
+
+    setBookings(prev => prev.map(b => {
+      if (b.id !== bookingId) return b;
+      return {
+        ...b,
+        status: 'confirmed',
+      };
+    }));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Slot Booking Confirmed by Hub',
+        desc: `Driver ${target.driverName}'s booking request for ${target.chargerTitle} approved for scheduled slot: ${target.startTime}.`,
+        time: 'Just now',
+        read: false
+      },
+      ...prev
+    ]);
+  };
+
+  const startChargingSession = (bookingId: string) => {
+    const target = bookings.find(b => b.id === bookingId);
+    if (!target) return;
+
+    const charger = chargers.find(c => c.id === target.chargerId);
+    const power = charger?.powerKw || 22;
+    const rate = charger?.priceRate || 18.00;
+
+    setBookings(prev => prev.map(b => {
+      if (b.id !== bookingId) return b;
+      return {
+        ...b,
+        status: 'active',
+        activeSession: {
+          startedAt: new Date().toISOString(),
+          currentKwh: 0.20,
+          currentCost: Number((0.20 * rate).toFixed(2)),
+          batteryPercentage: 42,
+          flowRateKw: power,
+        }
+      };
+    }));
+
+    updateChargerStatus(target.chargerId, 'in-use');
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Vehicle Connected & Charging Started',
+        desc: `Vehicle plugged into ${target.chargerTitle}. Real-time power delivery active at ${power} kW.`,
+        time: 'Just now',
+        read: false
+      },
+      ...prev
+    ]);
+  };
+
+  const declineBookingRequest = (bookingId: string) => {
+    const target = bookings.find(b => b.id === bookingId);
+    if (!target) return;
+
+    // Refund if paid via wallet and the driver is the current user
+    if (target.paymentMethod === 'wallet' && currentUser && currentUser.id === target.driverId) {
+      setCurrentUser({ ...currentUser, walletBalance: currentUser.walletBalance + target.totalAmount });
+    }
+
+    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'rejected' } : b));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Booking Request Declined',
+        desc: `Booking #${bookingId} was declined by the hub host.`,
+        time: 'Just now',
+        read: false
+      },
+      ...prev
+    ]);
   };
 
   const stopActiveSession = () => {
@@ -553,12 +646,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loadSeedChargers,
         clearAllChargers,
         addChargerListing,
+        deleteCharger,
         updateChargerStatus,
         approveChargerListing,
         rejectChargerListing,
         toggleHostVacation,
         bookings,
         createBooking,
+        acceptBookingRequest,
+        declineBookingRequest,
+        startChargingSession,
         activeBooking,
         stopActiveSession,
         topUpWallet,

@@ -9,10 +9,12 @@ import { Database, PlusCircle, AlertCircle } from 'lucide-react';
 
 interface DriverViewProps {
   onOpenActiveSession: () => void;
+  onNavigateToBookings?: () => void;
 }
 
 export const DriverView: React.FC<DriverViewProps> = ({ 
   onOpenActiveSession,
+  onNavigateToBookings,
 }) => {
   const { chargers, loadSeedChargers, userCoords, setUserCoords } = useApp();
 
@@ -200,7 +202,9 @@ export const DriverView: React.FC<DriverViewProps> = ({
           onClose={() => setBookingModalCharger(null)}
           onBookingSuccess={() => {
             setBookingModalCharger(null);
-            onOpenActiveSession();
+            if (onNavigateToBookings) {
+              onNavigateToBookings();
+            }
           }}
         />
       )}

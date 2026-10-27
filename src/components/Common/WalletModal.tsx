@@ -15,7 +15,7 @@ interface WalletModalProps {
 
 export const WalletModal: React.FC<WalletModalProps> = ({ onClose }) => {
   const { currentUser, formatCurrency, topUpWallet } = useApp();
-  const [topUpAmount, setTopUpAmount] = useState<number>(50);
+  const [topUpAmount, setTopUpAmount] = useState<number>(1000);
   const [paymentOption, setPaymentOption] = useState<'upi' | 'card'>('upi');
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -28,8 +28,8 @@ export const WalletModal: React.FC<WalletModalProps> = ({ onClose }) => {
   };
 
   const transactions = [
-    { id: 'TX-901', desc: 'Charging Session #BKG-901', amount: -14.80, date: 'Today, 02:30 PM', type: 'debit' },
-    { id: 'TX-882', desc: 'Apple Pay Auto Top-up', amount: +50.00, date: 'Yesterday, 11:15 AM', type: 'credit' },
+    { id: 'TX-901', desc: 'Charging Session #BKG-901', amount: -380.00, date: 'Today, 02:30 PM', type: 'debit' },
+    { id: 'TX-882', desc: 'UPI Auto Top-up', amount: +1000.00, date: 'Yesterday, 11:15 AM', type: 'credit' },
   ];
 
   return (
@@ -61,7 +61,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({ onClose }) => {
           <span className="text-xs font-bold text-[#0F172A] block uppercase">Quick Top-Up</span>
           
           <div className="grid grid-cols-3 gap-2">
-            {[25, 50, 100].map(amt => (
+            {[500, 1000, 2000].map(amt => (
               <button
                 key={amt}
                 type="button"
