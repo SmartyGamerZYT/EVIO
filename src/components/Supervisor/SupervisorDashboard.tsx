@@ -127,9 +127,6 @@ export const SupervisorDashboard: React.FC = () => {
             </span>
           </div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Supervisor Operations Console</h1>
-          <p className="text-xs text-[#64748B] mt-1 font-sans">
-            Full administrative authority over all grid charging nodes: review electrical earthing certificates, balance feeder load, resolve disputes, or delete non-compliant stations.
-          </p>
         </div>
 
         {/* Tab Switcher */}
@@ -234,7 +231,6 @@ export const SupervisorDashboard: React.FC = () => {
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
             {chargers.length} Stations
           </div>
-          <div className="text-[11px] text-[#0284C7] font-mono mt-1">{liveListings.length} Live on Map</div>
         </div>
 
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
@@ -245,7 +241,6 @@ export const SupervisorDashboard: React.FC = () => {
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
             {pendingListings.length} Pending
           </div>
-          <div className="text-[11px] text-[#D97706] font-mono mt-1">Requires Safety Sign-Off</div>
         </div>
 
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
@@ -256,7 +251,6 @@ export const SupervisorDashboard: React.FC = () => {
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
             {currentLoadKw.toFixed(1)} kW
           </div>
-          <div className="text-[11px] text-[#16A34A] font-mono mt-1">{loadPercentage}% Line Saturation</div>
         </div>
 
         <div className="bg-white border border-[#BAE6FD] rounded-card p-4 shadow-sm">
@@ -267,7 +261,6 @@ export const SupervisorDashboard: React.FC = () => {
           <div className="font-mono text-2xl font-bold text-[#0F172A]">
             {disputes.filter(d => d.status !== 'resolved').length} Pending
           </div>
-          <div className="text-[11px] text-[#64748B] font-mono mt-1">Arbitration Queue</div>
         </div>
       </div>
 
@@ -280,9 +273,6 @@ export const SupervisorDashboard: React.FC = () => {
                 <Zap className="w-4 h-4 text-[#0284C7]" />
                 <span>All Grid Charging Stations Authority ({chargers.length})</span>
               </h2>
-              <p className="text-xs text-[#64748B] font-sans">
-                As a Grid Supervisor, you hold root authority to inspect, approve, or permanently delete any station.
-              </p>
             </div>
 
             {/* Search */}
@@ -439,9 +429,6 @@ export const SupervisorDashboard: React.FC = () => {
             <div className="bg-white border border-[#BAE6FD] rounded-card p-12 text-center text-xs text-[#64748B] font-mono shadow-sm">
               <CheckCircle2 className="w-8 h-8 text-[#16A34A] mx-auto mb-2 opacity-80" />
               <p className="font-bold text-[#0F172A]">All Safety Certificates Verified</p>
-              <p className="font-sans text-[11px] text-[#64748B] mt-1">
-                Zero pending chargers in supervisor audit queue. New host station submissions will appear here for electrical sign-off.
-              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
@@ -641,9 +628,6 @@ export const SupervisorDashboard: React.FC = () => {
                     <Zap className="w-4 h-4 text-[#0284C7]" />
                     <span>All Charging Stations Registered by {selectedHub.name} ({selectedHub.chargers.length})</span>
                   </h3>
-                  <span className="text-xs text-[#64748B] font-mono">
-                    Click any station to view power graphs and past receipts
-                  </span>
                 </div>
 
                 <div className="bg-white border border-[#BAE6FD] rounded-card overflow-hidden shadow-sm">
@@ -766,9 +750,6 @@ export const SupervisorDashboard: React.FC = () => {
                     <Users className="w-4 h-4 text-[#0284C7]" />
                     <span>Registered Hub Operators & Commercial Hosts ({uniqueHubs.length})</span>
                   </h2>
-                  <p className="text-xs text-[#64748B] font-mono mt-0.5">
-                    Select any hub to inspect its full charging fleet, power distribution graphs and past receipts.
-                  </p>
                 </div>
               </div>
 
@@ -841,14 +822,10 @@ export const SupervisorDashboard: React.FC = () => {
                   <span className="text-xs font-mono font-bold text-[#16A34A] uppercase px-2 py-0.5 rounded bg-[#DCFCE7] border border-[#86EFAC]">
                     Wholesale Procurement Pipeline
                   </span>
-                  <span className="text-xs text-[#64748B] font-mono">Tier-1 Factory Direct Hardware POs</span>
                 </div>
                 <h2 className="text-xl font-bold text-[#0F172A] tracking-tight">
                   Franchise Hub Partners & Bulk Charger Applications ({franchiseApplications.length})
                 </h2>
-                <p className="text-xs text-[#64748B] mt-1 font-sans max-w-2xl">
-                  Review commercial site applications. Approving an application authorizes the subsidized wholesale hardware package procurement from ABB/Schneider/Delta and queues grid connection compliance audit.
-                </p>
               </div>
 
               <div className="p-3 bg-[#F0F9FF] border border-[#BAE6FD] rounded-xl text-center font-mono">

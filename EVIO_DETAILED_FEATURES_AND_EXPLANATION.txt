@@ -1,0 +1,255 @@
+================================================================================
+EVIO - PEER-TO-PEER ELECTRIC VEHICLE CHARGING GRID & MOBILITY PLATFORM
+DETAILED FEATURES LIST AND PLAIN-ENGLISH SYSTEM EXPLANATION
+================================================================================
+
+1. WHAT IS EVIO?
+--------------------------------------------------------------------------------
+EVIO is a complete peer-to-peer (P2P) electric vehicle charging marketplace and 
+energy mobility network designed for modern EV drivers, private/commercial charging 
+hub hosts, and electrical grid supervisors.
+
+In simple terms:
+- If you drive an EV, EVIO helps you find chargers, book guaranteed charging slots, 
+  plan long journeys so your battery never dies, order swappable batteries to your 
+  breakdown location, or get emergency roadside charging from nearby EVs on highways.
+- If you own a charger, home wallbox, or commercial property, EVIO lets you list your 
+  chargers, charge visiting drivers, manage bookings, review real-time electricity 
+  consumption (kWh), and earn money.
+- If you are a grid supervisor or electrical inspector, EVIO gives you full root 
+  authority to audit earthing safety certificates, balance power feeder loads, approve 
+  or delete non-compliant stations, and issue wholesale hardware quotations for new 
+  franchise hubs.
+
+
+================================================================================
+2. USER ROLES & DASHBOARDS
+================================================================================
+EVIO supports three distinct, role-tailored dashboards:
+
+1. DRIVER DASHBOARD:
+   For EV car and 2-wheeler owners who need to discover stations, book slots, 
+   plan road trips, order battery delivery, or request roadside emergency charging.
+
+2. HUB (HOST) DASHBOARD:
+   For charging station owners and operators to manage their charging nodes, 
+   approve/reject driver booking requests, inspect live electrical power (kWh), 
+   and download past tax invoices.
+
+3. SUPERVISOR DASHBOARD:
+   For electrical safety administrators and grid operators to oversee all chargers 
+   across the network, verify compliance certificates, monitor transformer loads, 
+   and manage wholesale franchise partnerships.
+
+
+================================================================================
+3. DRIVER DASHBOARD FEATURES IN DETAIL
+================================================================================
+
+A. INTERACTIVE LIVE MAP & CHARGER DISCOVERY
+- Real-time Leaflet OpenStreetMap with full zoom, pan, and GPS geolocation.
+- Instant "Use GPS / Locate Me" button that drops your vehicle pin at your real location.
+- Color-coded pins on the map:
+  * Green Pins: Community Hub stations with advance slot booking available.
+  * Purple Pins: Pre-existing public fast charging stations (Tata Power, Ather, Jio-bp, Statiq).
+  * Amber Pins: Stations currently in-use by another driver.
+  * Grey Pins: Offline or maintenance stations.
+- Interactive popups showing station address, power rating (kW), per-unit price in Rupees (₹), 
+  connector types, and direct "Book Slot" or "Start GPS Directions" buttons.
+
+B. OPEN CHARGE MAP API INTEGRATION
+- Fully integrated with the live global Open Charge Map API (API Key: ad006700-30f2-4b9a-a092-38e1f21c3234).
+- Fetches and displays verified public fast charging stations around your current coordinates 
+  and along expressways.
+- Clearly flags public stations as "DRIVE-IN ONLY" so drivers know they operate on a 
+  first-come, first-served walk-in basis without advance slot booking.
+
+C. DYNAMIC JOURNEY PREDICTION & TRIP PLANNER
+- Complete road trip energy simulation tool:
+  * Origin and Destination Inputs: Enter any starting place and destination (e.g. Pune, Mumbai, 
+    Lonavala, Goa, Delhi, Bengaluru, etc.).
+  * Automatic Geocoding: Automatically resolves coordinates for any town, city, or address, 
+    and calculates accurate highway road distance.
+  * EV Vehicle Selection: Choose from popular models with factory specs:
+    - Tata Nexon EV Max (40.5 kWh, 138 Wh/km)
+    - Tata Tiago EV (24 kWh, 110 Wh/km)
+    - MG ZS EV (50.3 kWh, 145 Wh/km)
+    - Mahindra XUV400 (39.4 kWh, 140 Wh/km)
+    - Hyundai Ioniq 5 (72.6 kWh, 155 Wh/km)
+    - Ather 450X Gen 3 (3.7 kWh, 35 Wh/km)
+  * Current Battery (SoC %) Slider: Adjust your battery level from 10% to 100%.
+  * Driving Dynamics Mode: Switch between ECO (+12% range), NORMAL, and SPORT (-22% range).
+  * Cabin Climate (AC) Toggle: Factoring in auxiliary air-conditioning power consumption.
+  * Discharge Prediction Engine: Simulates battery consumption km-by-km. If the battery is 
+    predicted to die before the destination, it triggers an alert warning with the exact 
+    kilometer mark where the car will stop.
+  * Smart Charging Stop Recommendation: Recommends the optimal fast charging hub before 
+    your battery hits critical reserve, showing arrival battery %, required charge duration, 
+    kWh boost up to 80%, estimated cost in ₹, and a 1-click "Book Slot" button.
+  * Interactive Route Map: Visualizes the full route, Origin (Pin A), Destination (Pin B), 
+    Recommended Charging Stop (Zap Pin), and the Critical Discharge Point (Warning Beacon).
+  * Telemetry Graph: Displays an SVG battery degradation curve (SoC % vs Distance in km).
+
+D. ADVANCE CHARGING SLOT BOOKING
+- Book charging slots at community hubs in advance to guarantee an available parking bay.
+- Choose duration (1 to 4 hours) and start time.
+- Transparent pricing breakdown showing energy rate (₹/kWh), total estimated cost, 
+  and platform fees.
+- Two booking modes:
+  * Instant Booking: Immediate confirmation without waiting for host.
+  * Host Approval: Sends a request to the hub operator; confirmed once the host accepts.
+
+E. REAL-TIME CHARGING SESSION TELEMETRY
+- Live charging session dashboard once plugged in:
+  * Real-time flow rate in kilowatts (kW).
+  * Energy delivered counter in kilowatt-hours (kWh).
+  * Battery percentage progress ring.
+  * Live meter running cost in Indian Rupees (₹).
+  * Emergency Stop button to immediately conclude the session.
+
+F. DOORSTEP SWAPPABLE BATTERY DELIVERY
+- For vehicles with removable or quick-swap batteries (e.g., 2-wheelers and light EVs):
+  * Click "Battery Delivery" from the top navigation bar or quick banner.
+  * Interactive map automatically locates you via GPS.
+  * System calculates Haversine distances to all nearby hubs and automatically assigns 
+    the closest hub operator with fresh battery stock in inventory.
+  * 4-stage tracking timeline: Order Placed ➔ Technician Dispatched ➔ Arriving at Vehicle ➔ Battery Swapped.
+
+G. HIGHWAY V2V REVERSE CHARGING SOS (PEER-TO-PEER)
+- For stranded EV drivers on highways who run out of battery between distant stations:
+  * Connects with active online EV drivers who have bidirectional V2L / V2V charging 
+    capability and have the EVIO website open.
+  * Interactive radar map showing your stranded vehicle location and nearby cruising 
+    drivers on the same highway corridor.
+  * Send emergency roadside energy beacon to a passing driver to request 5 kWh to 15 kWh.
+  * Live status showing transfer speed (7.2 kW to 11 kW) and driver phone contact.
+
+H. ACTIVE EV DRIVER HEATMAPS & CHARGING DESERTS
+- Switch map view to Heatmap mode:
+  * High Density EV Clusters (Green/Amber): Areas with heavy EV commuter traffic.
+  * Charging Deserts (Red): Unserved dark zones where zero fast charging stations exist, 
+    highlighting prime locations for new franchise hubs.
+
+I. IN-APP WALLET & TAX RECEIPTS
+- Built-in wallet with balance top-up in Indian Rupees (₹).
+- Downloadable and viewable past tax invoices for every completed charging session, 
+  including station details, GST, power consumed, and session time.
+
+
+================================================================================
+4. HUB (HOST) DASHBOARD FEATURES IN DETAIL
+================================================================================
+
+A. CHARGING FLEET MANAGEMENT
+- Dedicated operator console showing all charging stations registered by the host.
+- KPI cards tracking Total Fleet Count, Combined Grid Capacity (kW), Net Earnings (₹), 
+  and Total Sessions Dispensed.
+
+B. TRUE REAL-TIME POWER TELEMETRY (kWh)
+- Accurately tracks electrical power delivered across the host's charging bays.
+- Zero-Charger Fix: If a host has not listed any chargers yet (0 stations), all stats 
+  strictly read 0 kWh, 0 sessions, ₹0 earnings, and a clean empty state card is displayed:
+  "No Charging Nodes Connected — List your first charger to start streaming telemetry."
+- When chargers exist, power delivery graphs calculate actual kWh delivered from 
+  confirmed and active charging sessions.
+
+C. LIST NEW CHARGER WIZARD (WITH INTERACTIVE PINNING MAP)
+- Easy 4-step wizard to add any charger (home, hub, office, or commercial):
+  * Step 1: Location & Pinning Map: Click on an interactive Leaflet map to drop an 
+    exact GPS pin for your charger, or use browser location. Select premise type 
+    (Home Driveway, Commercial Hub, Office Tech Park).
+  * Step 2: Electrical Specifications: Power capacity (kW), fast/rapid/slow tier, 
+    connector types (Type 2, CCS-2, CHAdeMO, GB/T, Type 1), cable length, and simultaneous bays.
+  * Step 3: Pricing & Operating Schedule: Rate per unit (₹/kWh), 24/7 or custom hours, 
+    instant booking vs host approval required.
+  * Step 4: Electrical Safety Compliance: Upload earthing verification certificate, 
+    inspection report, and photos of the charging bay.
+
+D. DRIVER REQUEST AUTHORIZATIONS & AUTO-ACCEPT SWITCH
+- Incoming booking requests from drivers appear in the "Driver Requests" queue.
+- Hosts can review vehicle model, requested time slot, and click "Accept" or "Decline".
+- Auto-Accept Toggle: Hosts can enable "Auto-Accept Requests" so bookings are automatically 
+  confirmed without manual intervention.
+
+E. STATION INSPECTION MODAL & PAST RECEIPTS
+- Click on any listed charger in your fleet to open the full inspection modal:
+  * Live status (Available, In-Use, Offline).
+  * Power delivery history and weekly usage charts.
+  * Complete list of past driver receipts with transaction IDs, energy dispensed, 
+    and earnings breakdown.
+- Toggle Vacation Mode to temporarily hide the station from the driver discovery map.
+- Delete Charger button to permanently remove the node from the system.
+
+
+================================================================================
+5. SUPERVISOR DASHBOARD FEATURES IN DETAIL
+================================================================================
+
+A. ROOT ADMINISTRATIVE AUTHORITY & DELETION CONTROL
+- Grid Safety Supervisors have full administrative oversight of every charging node 
+  on the network.
+- Supervisors can inspect any station, review its technical compliance, or permanently 
+  delete any unsafe or non-compliant charging station from the network.
+
+B. ELECTRICAL SAFETY & EARTHING AUDIT QUEUE
+- New charger submissions uploaded by hosts enter the supervisor's pending queue.
+- Supervisors inspect the uploaded earthing test reports (verifying earth resistance < 5 Ohms, 
+  RCD Type B trip curve, and circuit protection).
+- One-click "Approve & Authorize Live" to publish the station onto the public map, 
+  or "Reject" with specific feedback to the host.
+
+C. REGISTERED HUB OPERATORS DIRECTORY
+- A dedicated directory tab listing all commercial hub operators and hosts.
+- Click on any hub operator to view their complete charging station fleet, combined 
+  kilowatt capacity, live status, and historical session logs.
+
+D. SUBSTATION FEEDER LOAD BALANCING
+- Real-time transformer load and grid line saturation monitoring (kW).
+- Live station load table showing rated power and operational status.
+- Grid frequency stability and voltage variance telemetry.
+
+E. FRANCHISE WHOLESALE PRICING & QUOTATION PIPELINE
+- When prospective hub operators submit a franchise application to buy commercial chargers 
+  in bulk, the application is routed to the Supervisor Console.
+- Supervisors review the applicant's proposed location (viewable on an interactive map) 
+  and electrical sanction load.
+- Supervisors formulate custom wholesale rates (₹ per charger) based on order volume, 
+  add verification notes, and dispatch the quotation directly to the applicant.
+
+F. DISPUTES & ARBITRATION QUEUE
+- Driver-host charging dispute handling (e.g., interrupted sessions, faulty connectors).
+- Supervisors review evidence and can issue full or partial wallet refunds with 1 click.
+
+
+================================================================================
+6. FRANCHISE BULK PROCUREMENT SYSTEM
+================================================================================
+- Allows individuals and commercial property owners to establish their own multi-charger 
+  EVIO Hub.
+- EVIO aggregates bulk orders directly from tier-1 manufacturers (ABB, Schneider Electric, 
+  Delta, Exicom) to secure wholesale volume discounts.
+- Transparent Application Workflow:
+  1. Applicant chooses charger types (7.4kW AC, 22kW Dual AC, 60kW DC Fast, 120kW Superfast) 
+     and quantity.
+  2. Applicant drops a pin on an interactive Leaflet map to select the proposed hub site.
+  3. Fixed rates have been removed; upon submission, the application is sent directly to 
+     the Grid Supervisor.
+  4. The Supervisor verifies the site and provides an official wholesale price quotation (in ₹).
+  5. The applicant reviews the quotation on their dashboard and proceeds with setup.
+
+
+================================================================================
+7. UI/UX DESIGN & ENGINEERING SPECIFICATIONS
+================================================================================
+- Palette: Light, clean theme with White (#FFFFFF), Soft Slate (#F8FAFC), Sky Blue (#0284C7), 
+  and Emerald Green (#16A34A).
+- Currency: Indian Rupee (₹) standard across all fees, rates, and wallet balances.
+- Typography: Clean sans-serif with monospace elements for numbers, IDs, and electrical telemetry.
+- Zero Emojis: Replaced with crisp, professional Lucide vector icons throughout.
+- Responsive: Fully functional across desktops, laptops, tablets, and mobile smartphones.
+- Zero Lag: Built with Vite, React 19, and optimized Leaflet mapping layers.
+
+
+================================================================================
+END OF DOCUMENT - EVIO TECHNICAL & FUNCTIONAL SPECIFICATION
+================================================================================

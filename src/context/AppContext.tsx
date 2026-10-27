@@ -199,7 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [userCoords, setUserCoords] = useState<[number, number]>([37.7749, -122.4194]);
+  const [userCoords, setUserCoords] = useState<[number, number]>([18.5204, 73.8567]);
   const [currency, setCurrency] = useState<Currency>('INR');
 
   const [chargers, setChargers] = useState<ChargerListing[]>(() => {
@@ -207,6 +207,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed: ChargerListing[] = JSON.parse(saved);
+        // Automatically migrate stale San Francisco chargers to local coordinates
+        if (parsed.some(c => c.lat > 35 && c.lng < -100)) {
+          localStorage.removeItem('evio_chargers');
+          return INITIAL_CHARGERS;
+        }
         // Merge public stations if not present yet
         const hasPublic = parsed.some(c => c.isPublicStation);
         if (!hasPublic) {
@@ -362,6 +367,133 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Open Charge Map real-time public stations integration using API Key
   useEffect(() => {
     let isMounted = true;
+
+    // Ensure local EVIO Hubs exist near user's coordinates
+    setChargers(prev => {
+      const nearby = prev.filter(c => {
+        const dLat = (c.lat - userCoords[0]) * 111;
+        const dLng = (c.lng - userCoords[1]) * 111 * Math.cos(userCoords[0] * Math.PI / 180);
+        return Math.sqrt(dLat * dLat + dLng * dLng) <= 25;
+      });
+
+      if (nearby.length < 3) {
+        const localSeed: ChargerListing[] = [
+          {
+            id: `hub-local-${Math.round(userCoords[0] * 100)}-1`,
+            hostId: 'host-local-01',
+            hostName: 'Local Community EV Hub',
+            hostAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+            hostRating: 4.9,
+            hostReviewsCount: 28,
+            title: 'Nearby Community 22kW Fast Bay',
+            description: 'Local neighborhood dual-gun charging station with solar battery backup and instant boom barrier access.',
+            photos: ['https://images.unsplash.com/photo-1558441719-798481498b3f?w=800'],
+            approxAddress: 'Sector Hub Parking Plaza (1.2 km away)',
+            exactAddress: 'Main Corridor Bay 2, Sector Commercial Complex',
+            lat: userCoords[0] + 0.009,
+            lng: userCoords[1] + 0.007,
+            powerKw: 22,
+            powerTier: 'fast',
+            connectorTypes: ['Type 2', 'CCS-2'],
+            cableLengthMeters: 7.5,
+            simultaneousSlots: 2,
+            pricingType: 'per-kwh',
+            priceRate: 18.00,
+            safetyCertificateName: 'Certified_Electrical_Safety_Report.pdf',
+            safetyCertificateVerified: true,
+            schedule: { is247: true, days: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], hours: 'Open 24/7' },
+            amenities: ['Covered Canopy', 'CCTV Security', 'WiFi', 'Restrooms'],
+            accessNotes: 'Drive to Bay 2. Automated camera barrier.',
+            bookingMode: 'instant',
+            maxDurationHours: 4,
+            status: 'available',
+            listingStatus: 'live',
+            createdAt: '2026-10-10',
+            locationType: 'hub',
+            isPublicStation: false,
+            offersBatteryDelivery: true,
+            batteryStockCount: 6,
+          },
+          {
+            id: `hub-local-${Math.round(userCoords[0] * 100)}-2`,
+            hostId: 'host-local-02',
+            hostName: 'Highway SuperBay Host',
+            hostAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+            hostRating: 4.8,
+            hostReviewsCount: 39,
+            title: 'Expressway 60kW DC Superfast Node',
+            description: 'Direct DC fast bay for rapid 20-minute battery top-up. Equipped with dual CCS-2 guns.',
+            photos: ['https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800'],
+            approxAddress: 'Bypass Fuel & Charging Plaza (2.8 km away)',
+            exactAddress: 'Highway Commercial Wing, East Service Road',
+            lat: userCoords[0] - 0.014,
+            lng: userCoords[1] + 0.012,
+            powerKw: 60,
+            powerTier: 'rapid',
+            connectorTypes: ['CCS-2', 'Type 2'],
+            cableLengthMeters: 6.0,
+            simultaneousSlots: 2,
+            pricingType: 'per-kwh',
+            priceRate: 22.50,
+            safetyCertificateName: 'Commercial_DC_Fast_Safety_Clearance.pdf',
+            safetyCertificateVerified: true,
+            schedule: { is247: true, days: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], hours: 'Open 24/7' },
+            amenities: ['24/7 Food Court', 'Clean Washrooms', 'Coffee Lounge'],
+            accessNotes: 'Designated high-power EV charging bay near food court.',
+            bookingMode: 'instant',
+            maxDurationHours: 2,
+            status: 'available',
+            listingStatus: 'live',
+            createdAt: '2026-10-12',
+            locationType: 'commercial',
+            isPublicStation: false,
+            offersBatteryDelivery: true,
+            batteryStockCount: 8,
+          },
+          {
+            id: `hub-local-${Math.round(userCoords[0] * 100)}-3`,
+            hostId: 'operator-local-fast',
+            hostName: 'Public Fast Station',
+            hostAvatar: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=150',
+            hostRating: 4.6,
+            hostReviewsCount: 52,
+            title: 'Public 50kW Fast Charging Bay',
+            description: 'Public fast station operating on first-come walk-in basis.',
+            photos: ['https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800'],
+            approxAddress: 'Public Fuel Plaza Station (3.5 km away)',
+            exactAddress: 'Public Fuel Center, Highway Service Corridor',
+            lat: userCoords[0] + 0.018,
+            lng: userCoords[1] - 0.016,
+            powerKw: 50,
+            powerTier: 'rapid',
+            connectorTypes: ['CCS-2'],
+            cableLengthMeters: 5.0,
+            simultaneousSlots: 2,
+            pricingType: 'per-kwh',
+            priceRate: 21.00,
+            safetyCertificateName: 'Public_Station_Verified.pdf',
+            safetyCertificateVerified: true,
+            schedule: { is247: true, days: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], hours: 'Open 24/7' },
+            amenities: ['Convenience Store', 'Air Pump', 'Restrooms'],
+            accessNotes: 'Direct drive-in charging bay.',
+            bookingMode: 'instant',
+            maxDurationHours: 2,
+            status: 'available',
+            listingStatus: 'live',
+            createdAt: '2026-09-15',
+            locationType: 'commercial',
+            isPublicStation: true,
+            operatorBrand: 'Tata Power EZ Charge'
+          }
+        ];
+        const existingIds = new Set(prev.map(c => c.id));
+        const filteredSeed = localSeed.filter(s => !existingIds.has(s.id));
+        const merged = [...prev, ...filteredSeed];
+        localStorage.setItem('evio_chargers', JSON.stringify(merged));
+        return merged;
+      }
+      return prev;
+    });
     
     // Fetch around user's active coordinates
     fetchOpenChargeMapStations(userCoords[0], userCoords[1], 50).then(ocmStations => {

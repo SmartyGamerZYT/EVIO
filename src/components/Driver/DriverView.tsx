@@ -138,9 +138,6 @@ export const DriverView: React.FC<DriverViewProps> = ({
               <span className="text-xs font-mono font-bold text-[#0F172A] block group-hover:text-[#0284C7]">
                 Doorstep Swappable Battery Delivery
               </span>
-              <span className="text-[11px] text-[#64748B] font-mono">
-                Nearest hub delivers fresh 100% battery pack (~18 mins)
-              </span>
             </div>
           </div>
           <span className="text-xs font-mono font-bold text-[#0284C7] group-hover:translate-x-1 transition-transform">
@@ -159,9 +156,6 @@ export const DriverView: React.FC<DriverViewProps> = ({
             <div>
               <span className="text-xs font-mono font-bold text-[#0F172A] block group-hover:text-[#E11D48]">
                 Highway V2V Reverse Charge SOS
-              </span>
-              <span className="text-[11px] text-[#64748B] font-mono">
-                Stranded on highway? Request charge from passing EVs
               </span>
             </div>
           </div>

@@ -118,9 +118,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
             Station Fleet • {currentUser?.name || 'Hub Host'}
           </h1>
-          <p className="text-xs text-[#64748B] mt-1 font-sans">
-            Manage your EV charging nodes, authorize driver booking requests, review electrical telemetry, and inspect past station receipts.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
@@ -180,10 +177,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           <div className="font-mono text-[30px] font-bold text-[#0F172A] tracking-tight">
             {myChargers.length} {myChargers.length === 1 ? 'Station' : 'Stations'}
           </div>
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-[#64748B] font-mono">
-            <span className="text-[#D97706] font-bold">{pendingCount}</span>
-            <span>Awaiting supervisor approval</span>
-          </div>
         </div>
 
         {/* KPI 2: Total Power Capacity */}
@@ -194,9 +187,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           </div>
           <div className="font-mono text-[30px] font-bold text-[#16A34A] tracking-tight">
             {totalCapacityKw} kW
-          </div>
-          <div className="mt-2 text-xs text-[#64748B] font-mono">
-            Combined grid capacity
           </div>
         </div>
 
@@ -209,9 +199,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           <div className="font-mono text-[30px] font-bold text-[#0F172A] tracking-tight">
             {formatCurrency(totalEarnings)}
           </div>
-          <div className="mt-2 text-xs text-[#64748B] font-mono">
-            After 10% network operations fee
-          </div>
         </div>
 
         {/* KPI 4: Sessions & Energy */}
@@ -222,9 +209,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
           </div>
           <div className="font-mono text-[30px] font-bold text-[#0284C7] tracking-tight">
             {totalSessions}
-          </div>
-          <div className="mt-2 text-xs text-[#64748B] font-mono">
-            {totalKwh} kWh delivered
           </div>
         </div>
 
@@ -238,9 +222,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
               <Zap className="w-5 h-5 text-[#0284C7]" />
               <span>All Stations Listed by Me ({myChargers.length})</span>
             </h2>
-            <p className="text-xs text-[#64748B] font-sans">
-              Click any station card to inspect full details, past session usages, and tax invoices.
-            </p>
           </div>
 
           <button
@@ -426,7 +407,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
                   <Zap className="w-4 h-4 text-[#0284C7]" />
                   <span>Real-Time Power Delivery (kWh)</span>
                 </h3>
-                <p className="text-xs text-[#64748B] font-mono">Telemetry aggregate across your charging bays</p>
               </div>
 
               <div className="flex items-center bg-[#F8FAFC] p-1 rounded-xl border border-[#CBD5E1] text-xs font-mono self-start sm:self-auto">
