@@ -13,7 +13,11 @@ import {
   CheckCircle2,
   Cpu,
   LogOut,
-  DollarSign
+  DollarSign,
+  Truck,
+  Building2,
+  Repeat,
+  Radio
 } from 'lucide-react';
 import { useApp, Currency } from '../context/AppContext';
 
@@ -24,6 +28,9 @@ interface NavbarProps {
   onOpenChat: () => void;
   onOpenActiveSession: () => void;
   onOpenAI: () => void;
+  onOpenBatteryDelivery: () => void;
+  onOpenV2V: () => void;
+  onOpenFranchise: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -33,6 +40,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenChat,
   onOpenActiveSession,
   onOpenAI,
+  onOpenBatteryDelivery,
+  onOpenV2V,
+  onOpenFranchise,
 }) => {
   const { 
     currentUser, 
@@ -128,7 +138,37 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+
+          {/* Battery Delivery Button */}
+          <button
+            onClick={onOpenBatteryDelivery}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#0284C7] text-xs font-mono font-bold text-[#0F172A] hover:text-[#0284C7] transition-all shadow-xs"
+            title="Order Swappable Battery Delivery"
+          >
+            <Truck className="w-3.5 h-3.5 text-[#0284C7]" />
+            <span className="hidden lg:inline">Battery Delivery</span>
+          </button>
+
+          {/* V2V Highway Reverse Charge SOS */}
+          <button
+            onClick={onOpenV2V}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#FECDD3] hover:border-[#E11D48] text-xs font-mono font-bold text-[#E11D48] hover:bg-[#FFF1F2] transition-all shadow-xs"
+            title="P2P V2V Highway Reverse Charge SOS"
+          >
+            <Repeat className="w-3.5 h-3.5 text-[#E11D48]" />
+            <span className="hidden lg:inline">V2V SOS</span>
+          </button>
+
+          {/* Hub Franchise Partner */}
+          <button
+            onClick={onOpenFranchise}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#F0FDF4] border border-[#86EFAC] hover:border-[#16A34A] text-xs font-mono font-bold text-[#16A34A] transition-all shadow-xs"
+            title="Setup Hub Franchise with Bulk Wholesale Chargers"
+          >
+            <Building2 className="w-3.5 h-3.5 text-[#16A34A]" />
+            <span className="hidden md:inline">Franchise</span>
+          </button>
 
           {/* AI Telemetry Assistant */}
           <button
@@ -137,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Open AI Route & Charging Assistant"
           >
             <Cpu className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">AI Assistant</span>
+            <span className="hidden xl:inline">AI Assistant</span>
           </button>
 
           {/* Active Session Indicator */}

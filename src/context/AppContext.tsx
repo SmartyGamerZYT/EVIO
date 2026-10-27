@@ -3,11 +3,24 @@ import {
   UserProfile, 
   ChargerListing, 
   Booking, 
+  BookingStatus,
   UserRole, 
   ChatMessage, 
-  DisputeReport 
+  DisputeReport,
+  BatteryDeliveryRequest,
+  FranchiseApplication,
+  V2VReverseChargeRequest 
 } from '../types';
-import { INITIAL_USERS, INITIAL_CHARGERS, INITIAL_BOOKINGS, INITIAL_DISPUTES, SEED_CALIBRATION_CHARGERS } from '../data/mockData';
+import { 
+  INITIAL_USERS, 
+  INITIAL_CHARGERS, 
+  INITIAL_BOOKINGS, 
+  INITIAL_DISPUTES, 
+  SEED_CALIBRATION_CHARGERS,
+  INITIAL_BATTERY_DELIVERIES,
+  INITIAL_FRANCHISE_APPLICATIONS,
+  INITIAL_V2V_REQUESTS 
+} from '../data/mockData';
 
 export type Currency = 'USD' | 'EUR' | 'INR' | 'GBP';
 
@@ -33,6 +46,8 @@ interface AppContextType {
   approveChargerListing: (chargerId: string) => void;
   rejectChargerListing: (chargerId: string, reason: string) => void;
   toggleHostVacation: (chargerId: string) => void;
+  autoAcceptBookings: boolean;
+  toggleAutoAcceptBookings: () => void;
   bookings: Booking[];
   createBooking: (
     charger: ChargerListing,
@@ -52,6 +67,20 @@ interface AppContextType {
   sendChatMessage: (bookingId: string, text: string) => void;
   disputes: DisputeReport[];
   resolveDispute: (disputeId: string) => void;
+  batteryDeliveries: BatteryDeliveryRequest[];
+  requestBatteryDelivery: (data: Omit<BatteryDeliveryRequest, 'id' | 'createdAt' | 'status'>) => BatteryDeliveryRequest;
+  dispatchBatteryDelivery: (requestId: string, deliveryPartnerName?: string) => void;
+  completeBatteryDelivery: (requestId: string) => void;
+  cancelBatteryDelivery: (requestId: string) => void;
+  franchiseApplications: FranchiseApplication[];
+  submitFranchiseApplication: (app: Omit<FranchiseApplication, 'id' | 'createdAt' | 'status'>) => FranchiseApplication;
+  updateFranchiseStatus: (id: string, status: FranchiseApplication['status']) => void;
+  v2vRequests: V2VReverseChargeRequest[];
+  createV2VRequest: (data: Omit<V2VReverseChargeRequest, 'id' | 'createdAt' | 'status'>) => V2VReverseChargeRequest;
+  acceptV2VRequest: (requestId: string, donorDriverId: string, donorDriverName: string, donorVehicle: string) => void;
+  startV2VTransfer: (requestId: string) => void;
+  completeV2VTransfer: (requestId: string, transferredKwh: number) => void;
+  cancelV2VRequest: (requestId: string) => void;
   notifications: Array<{ id: string; title: string; desc: string; time: string; read: boolean }>;
   markNotificationsAsRead: () => void;
 }
@@ -62,17 +91,19 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     name: 'Sarah Jenkins (Driver)',
     email: 'driver@evio.com',
     password: 'driver123',
-    phone: '+1 555-0192',
+    phone: '+91 98765-43210',
     role: 'driver',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
     isVerified: true,
     walletBalance: 2500.0,
     vehicle: {
-      make: 'Tesla',
-      model: 'Model Y Long Range',
-      batteryCapacity: 75.0,
-      connector: 'CCS-2',
-      plateNumber: 'EV-7829',
+      make: 'Ather',
+      model: '450X Swappable Gen 3',
+      batteryCapacity: 3.7,
+      connector: 'Type 2',
+      plateNumber: 'KA-01-EV-4421',
+      hasSwappableBattery: true,
+      batteryType: '51.1V 3.7kWh Quick-Swap Pack',
     }
   },
   {
@@ -80,41 +111,43 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     name: 'Marcus Vance (Hub Host)',
     email: 'hub@evio.com',
     password: 'hub123',
-    phone: '+1 555-0144',
+    phone: '+91 98111-22334',
     role: 'hub',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     isVerified: true,
     walletBalance: 15400.0,
+    autoAcceptBookings: true,
+    swappableBatteriesCount: 8,
   },
   {
     id: 'usr-supervisor-demo',
     name: 'Elena Rostova (Grid Supervisor)',
     email: 'supervisor@evio.com',
     password: 'super123',
-    phone: '+1 555-0199',
+    phone: '+91 98999-00112',
     role: 'supervisor',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
     isVerified: true,
     walletBalance: 0,
   },
   // Unified ID accounts for testing:
-  // "id can be same for all dashboard but the password created during registration for specific dashboard will decide on which dashboard it should drop"
   {
     id: 'usr-multi-driver',
     name: 'Alex Demo (Driver)',
     email: 'demo@evio.com',
     password: 'driver123',
-    phone: '+1 555-9001',
+    phone: '+91 98333-44556',
     role: 'driver',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     isVerified: true,
     walletBalance: 2800.0,
+    hasV2VCapableVehicle: true,
     vehicle: {
       make: 'Hyundai',
-      model: 'Ioniq 5',
+      model: 'Ioniq 5 (Bidirectional V2L / V2V Enabled)',
       batteryCapacity: 77.4,
       connector: 'CCS-2',
-      plateNumber: 'IO-9921',
+      plateNumber: 'MH-12-EV-9921',
     }
   },
   {
@@ -122,18 +155,20 @@ const DEFAULT_ACCOUNTS: UserProfile[] = [
     name: 'Alex Demo (Hub Host)',
     email: 'demo@evio.com',
     password: 'hub123',
-    phone: '+1 555-9002',
+    phone: '+91 98333-44557',
     role: 'hub',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     isVerified: true,
     walletBalance: 18500.0,
+    autoAcceptBookings: true,
+    swappableBatteriesCount: 6,
   },
   {
     id: 'usr-multi-supervisor',
     name: 'Alex Demo (Supervisor)',
     email: 'demo@evio.com',
     password: 'super123',
-    phone: '+1 555-9003',
+    phone: '+91 98333-44558',
     role: 'supervisor',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     isVerified: true,
@@ -172,8 +207,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_DISPUTES;
   });
 
+  const [batteryDeliveries, setBatteryDeliveries] = useState<BatteryDeliveryRequest[]>(() => {
+    const saved = localStorage.getItem('evio_battery_deliveries');
+    return saved ? JSON.parse(saved) : INITIAL_BATTERY_DELIVERIES;
+  });
+
+  const [franchiseApplications, setFranchiseApplications] = useState<FranchiseApplication[]>(() => {
+    const saved = localStorage.getItem('evio_franchise_apps');
+    return saved ? JSON.parse(saved) : INITIAL_FRANCHISE_APPLICATIONS;
+  });
+
+  const [v2vRequests, setV2vRequests] = useState<V2VReverseChargeRequest[]>(() => {
+    const saved = localStorage.getItem('evio_v2v_requests');
+    return saved ? JSON.parse(saved) : INITIAL_V2V_REQUESTS;
+  });
+
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; desc: string; time: string; read: boolean }>>([]);
+
+  useEffect(() => {
+    localStorage.setItem('evio_battery_deliveries', JSON.stringify(batteryDeliveries));
+  }, [batteryDeliveries]);
+
+  useEffect(() => {
+    localStorage.setItem('evio_franchise_apps', JSON.stringify(franchiseApplications));
+  }, [franchiseApplications]);
+
+  useEffect(() => {
+    localStorage.setItem('evio_v2v_requests', JSON.stringify(v2vRequests));
+  }, [v2vRequests]);
 
   useEffect(() => {
     localStorage.setItem('evio_accounts', JSON.stringify(registeredAccounts));
@@ -415,6 +477,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
+  const autoAcceptBookings = currentUser?.autoAcceptBookings ?? false;
+
+  const toggleAutoAcceptBookings = () => {
+    if (!currentUser) return;
+    const newVal = !currentUser.autoAcceptBookings;
+    const updatedUser = { ...currentUser, autoAcceptBookings: newVal };
+    setCurrentUser(updatedUser);
+    setRegisteredAccounts(prev => prev.map(a => a.id === currentUser.id ? { ...a, autoAcceptBookings: newVal } : a));
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: newVal ? 'Auto-Accept Enabled' : 'Auto-Accept Disabled',
+        desc: newVal 
+          ? 'Incoming driver slot requests will now be auto-confirmed instantly.'
+          : 'Incoming driver slot requests now require manual approval.',
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
   const createBooking = (
     charger: ChargerListing,
     startTime: string,
@@ -441,6 +525,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(updatedUser);
     }
 
+    // Check if the hub host has auto-accept enabled
+    const hostUser = registeredAccounts.find(
+      u => u.id === charger.hostId || (charger.hostEmail && u.email.toLowerCase() === charger.hostEmail.toLowerCase())
+    );
+    const isHostAutoAccept = Boolean(hostUser?.autoAcceptBookings);
+    const initialStatus: BookingStatus = isHostAutoAccept ? 'confirmed' : 'requested';
+
     const newBooking: Booking = {
       id: `BKG-${Math.floor(1000 + Math.random() * 9000)}`,
       chargerId: charger.id,
@@ -457,7 +548,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       estimatedKwh,
       totalAmount,
       platformFee,
-      status: 'requested', // Driver booking sends request to Hub; slot is booked once Hub accepts
+      status: initialStatus,
       paymentMethod,
       paymentStatus: 'paid',
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -468,8 +559,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications(prev => [
       {
         id: `notif-${Date.now()}`,
-        title: 'Booking Request Sent to Hub',
-        desc: `Request for [${charger.title}] sent to host ${charger.hostName}. Slot will be confirmed upon host acceptance.`,
+        title: isHostAutoAccept ? 'Slot Booking Auto-Confirmed by Hub' : 'Booking Request Sent to Hub',
+        desc: isHostAutoAccept 
+          ? `Slot on [${charger.title}] automatically confirmed by Host's smart dispatcher. Scheduled slot: ${startTime}.`
+          : `Request for [${charger.title}] sent to host ${charger.hostName}. Slot will be confirmed upon host acceptance.`,
         time: 'Just now',
         read: false
       },
@@ -623,6 +716,201 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDisputes(prev => prev.map(d => d.id === disputeId ? { ...d, status: 'resolved' } : d));
   };
 
+  // Battery Delivery Feature
+  const requestBatteryDelivery = (data: Omit<BatteryDeliveryRequest, 'id' | 'createdAt' | 'status'>): BatteryDeliveryRequest => {
+    const newReq: BatteryDeliveryRequest = {
+      ...data,
+      id: `BAT-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: 'pending',
+      createdAt: 'Just now',
+    };
+
+    if (currentUser && currentUser.walletBalance >= data.totalCost) {
+      setCurrentUser({ ...currentUser, walletBalance: currentUser.walletBalance - data.totalCost });
+    }
+
+    setBatteryDeliveries(prev => [newReq, ...prev]);
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Emergency Battery Delivery Requested',
+        desc: `Dispatch request for ${data.batterySpec} sent to ${data.hubName}. Estimated arrival in ~${data.etaMinutes} mins.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+
+    return newReq;
+  };
+
+  const dispatchBatteryDelivery = (requestId: string, deliveryPartnerName: string = 'Express Evio Delivery Rider') => {
+    setBatteryDeliveries(prev => prev.map(r => r.id === requestId ? { ...r, status: 'dispatched', deliveryPartnerName } : r));
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Battery Dispatched to Vehicle',
+        desc: `Order #${requestId} is out for delivery with ${deliveryPartnerName}.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
+  const completeBatteryDelivery = (requestId: string) => {
+    const req = batteryDeliveries.find(r => r.id === requestId);
+    if (req && currentUser && currentUser.role === 'hub') {
+      // Credit hub operator with swap fee
+      setCurrentUser({ ...currentUser, walletBalance: currentUser.walletBalance + req.totalCost });
+    }
+    setBatteryDeliveries(prev => prev.map(r => r.id === requestId ? { ...r, status: 'delivered' } : r));
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Battery Swap Successfully Completed',
+        desc: `Order #${requestId} fresh battery safely installed into vehicle.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
+  const cancelBatteryDelivery = (requestId: string) => {
+    const req = batteryDeliveries.find(r => r.id === requestId);
+    if (req && currentUser && currentUser.id === req.driverId) {
+      // Refund driver
+      setCurrentUser({ ...currentUser, walletBalance: currentUser.walletBalance + req.totalCost });
+    }
+    setBatteryDeliveries(prev => prev.map(r => r.id === requestId ? { ...r, status: 'cancelled' } : r));
+  };
+
+  // Franchise Feature
+  const submitFranchiseApplication = (app: Omit<FranchiseApplication, 'id' | 'createdAt' | 'status'>): FranchiseApplication => {
+    const newApp: FranchiseApplication = {
+      ...app,
+      id: `FRAN-${Date.now().toString().slice(-4)}`,
+      status: 'submitted',
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+
+    setFranchiseApplications(prev => [newApp, ...prev]);
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Franchise Hub Application Submitted',
+        desc: `Application for ${app.city} (${app.packageType.toUpperCase()} Hub) sent to Supervisor for bulk hardware pricing approval.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+
+    return newApp;
+  };
+
+  const updateFranchiseStatus = (id: string, status: FranchiseApplication['status']) => {
+    setFranchiseApplications(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: `Franchise Application ${status.toUpperCase()}`,
+        desc: `Franchise order #${id} has been marked as ${status} by the Supervisor.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
+  // Peer-to-Peer V2V Reverse Charging
+  const createV2VRequest = (data: Omit<V2VReverseChargeRequest, 'id' | 'createdAt' | 'status'>): V2VReverseChargeRequest => {
+    const newReq: V2VReverseChargeRequest = {
+      ...data,
+      id: `V2V-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: 'broadcasting',
+      createdAt: 'Just now',
+    };
+
+    setV2vRequests(prev => [newReq, ...prev]);
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'Highway V2V Reverse Charge SOS Broadcasted',
+        desc: `Emergency SOS sent to passing EVs on ${data.location.highwayName}. Requesting ${data.requestedKwh} kWh at ${formatCurrency(data.offeredPayout)}.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+
+    return newReq;
+  };
+
+  const acceptV2VRequest = (requestId: string, donorDriverId: string, donorDriverName: string, donorVehicle: string) => {
+    setV2vRequests(prev => prev.map(r => r.id === requestId ? {
+      ...r,
+      status: 'accepted',
+      donorDriverId,
+      donorDriverName,
+      donorVehicle,
+    } : r));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'V2V Rescue Mission Accepted',
+        desc: `${donorDriverName} (${donorVehicle}) is approaching your highway location with bidirectional charging cable.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
+  const startV2VTransfer = (requestId: string) => {
+    setV2vRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'transferring' } : r));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'V2V Reverse Charge Transfer Started',
+        desc: `Bidirectional DC/AC cable locked. Delivering emergency energy at 11 kW.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
+  const completeV2VTransfer = (requestId: string, transferredKwh: number) => {
+    const req = v2vRequests.find(r => r.id === requestId);
+    if (req && req.donorDriverId && currentUser && currentUser.id === req.donorDriverId) {
+      setCurrentUser({ ...currentUser, walletBalance: currentUser.walletBalance + req.offeredPayout });
+    }
+
+    setV2vRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'completed', transferredKwh } : r));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: 'V2V Reverse Charging Completed',
+        desc: `Transferred ${transferredKwh} kWh successfully. Reward of ${formatCurrency(req?.offeredPayout || 450)} settled.`,
+        time: 'Just now',
+        read: false,
+      },
+      ...prev
+    ]);
+  };
+
+  const cancelV2VRequest = (requestId: string) => {
+    setV2vRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'cancelled' } : r));
+  };
+
   const markNotificationsAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
@@ -651,6 +939,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveChargerListing,
         rejectChargerListing,
         toggleHostVacation,
+        autoAcceptBookings,
+        toggleAutoAcceptBookings,
         bookings,
         createBooking,
         acceptBookingRequest,
@@ -663,6 +953,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendChatMessage,
         disputes,
         resolveDispute,
+        batteryDeliveries,
+        requestBatteryDelivery,
+        dispatchBatteryDelivery,
+        completeBatteryDelivery,
+        cancelBatteryDelivery,
+        franchiseApplications,
+        submitFranchiseApplication,
+        updateFranchiseStatus,
+        v2vRequests,
+        createV2VRequest,
+        acceptV2VRequest,
+        startV2VTransfer,
+        completeV2VTransfer,
+        cancelV2VRequest,
         notifications,
         markNotificationsAsRead,
       }}

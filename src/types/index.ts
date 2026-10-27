@@ -10,6 +10,8 @@ export type ListingStatus = 'draft' | 'pending' | 'live' | 'paused' | 'rejected'
 
 export type PricingType = 'per-kwh' | 'per-hour' | 'flat';
 
+export type LocationPremiseType = 'home' | 'hub' | 'office' | 'commercial' | 'hotel' | 'other';
+
 export type BookingStatus = 'requested' | 'confirmed' | 'active' | 'completed' | 'cancelled' | 'rejected';
 
 export interface UserProfile {
@@ -22,12 +24,17 @@ export interface UserProfile {
   avatar: string;
   isVerified: boolean;
   walletBalance: number;
+  autoAcceptBookings?: boolean; // Hub Operator setting: Auto-approve incoming booking requests
+  swappableBatteriesCount?: number;
+  hasV2VCapableVehicle?: boolean; // Driver setting: Has bidirectional V2V / V2L capability
   vehicle?: {
     model: string;
     make: string;
     batteryCapacity: number; // in kWh
     connector: ConnectorType;
     plateNumber: string;
+    hasSwappableBattery?: boolean;
+    batteryType?: string; // e.g. "48V 3.2kWh Lithium-ion Swap Pack"
   };
 }
 
@@ -68,6 +75,11 @@ export interface ChargerListing {
   listingStatus: ListingStatus;
   rejectionReason?: string;
   createdAt: string;
+  offersBatteryDelivery?: boolean;
+  batteryStockCount?: number;
+  locationType?: LocationPremiseType;
+  isPublicStation?: boolean; // True for pre-existing public EV stations (Tata Power, Ather Grid, Statiq, Jio-bp)
+  operatorBrand?: string;    // e.g. 'Tata Power EZ Charge', 'Ather Grid', 'Jio-bp pulse'
 }
 
 export interface Booking {
@@ -121,4 +133,95 @@ export interface DisputeReport {
   details: string;
   status: 'open' | 'investigating' | 'resolved';
   createdAt: string;
+}
+
+export interface BatteryDeliveryRequest {
+  id: string;
+  driverId: string;
+  driverName: string;
+  driverPhone: string;
+  driverLocation: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+  vehicleInfo: string;
+  batterySpec: string; // e.g. "48V 3.2kWh Lithium Smart Pack"
+  hubId: string;
+  hubName: string;
+  hubPhone?: string;
+  status: 'pending' | 'dispatched' | 'delivered' | 'cancelled';
+  etaMinutes: number;
+  deliveryFee: number;
+  batterySwapFee: number;
+  totalCost: number;
+  deliveryPartnerName?: string;
+  createdAt: string;
+}
+
+export interface FranchiseApplication {
+  id: string;
+  applicantName: string;
+  email: string;
+  phone: string;
+  city: string;
+  locationAddress: string;
+  packageType: 'micro' | 'commercial' | 'highway';
+  powerSanctionKw: number;
+  landType: 'owned' | 'leased';
+  status: 'submitted' | 'under-review' | 'approved' | 'rejected';
+  estimatedInvestment: number;
+  expectedMonthlyEarnings: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface V2VReverseChargeRequest {
+  id: string;
+  strandedDriverId: string;
+  strandedDriverName: string;
+  strandedDriverPhone: string;
+  strandedVehicle: string;
+  location: {
+    lat: number;
+    lng: number;
+    highwayName: string;
+  };
+  currentSoc: number; // e.g. 4%
+  requestedKwh: number; // e.g. 8 kWh to reach next fast charger
+  offeredPayout: number; // e.g. ₹350
+  status: 'broadcasting' | 'accepted' | 'transferring' | 'completed' | 'cancelled';
+  donorDriverId?: string;
+  donorDriverName?: string;
+  donorVehicle?: string;
+  transferredKwh?: number;
+  createdAt: string;
+}
+
+export interface ActiveOnlineDriver {
+  id: string;
+  name: string;
+  phone: string;
+  vehicle: string;
+  batterySoc: number; // e.g. 78%
+  hasV2VCable: boolean;
+  v2vOutputKw: number; // e.g. 11
+  lat: number;
+  lng: number;
+  highwayCorridor: string;
+  isOnline: boolean;
+  lastHeartbeat: number;
+  isBackgroundActive?: boolean;
+}
+
+export interface HeatmapZone {
+  id: string;
+  type: 'high_ev_density' | 'charging_desert' | 'station_coverage';
+  center: [number, number];
+  radiusMeters: number;
+  intensity: number; // 0 to 1
+  label: string;
+  evDriverCount?: number;
+  unservedKm?: number;
+  description: string;
 }

@@ -37,10 +37,12 @@ export const SupervisorDashboard: React.FC = () => {
     formatCurrency, 
     disputes, 
     resolveDispute,
-    bookings
+    bookings,
+    franchiseApplications,
+    updateFranchiseStatus
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'hubs' | 'grid' | 'disputes' | 'audit'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'hubs' | 'franchise' | 'grid' | 'disputes' | 'audit'>('all');
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const [selectedChargerForInspect, setSelectedChargerForInspect] = useState<ChargerListing | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -162,6 +164,19 @@ export const SupervisorDashboard: React.FC = () => {
             <span>Hub Operators</span>
             <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
               {uniqueHubs.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('franchise')}
+            className={`px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'franchise' ? 'bg-[#0284C7] text-white shadow-xs' : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+          >
+            <Building className="w-3.5 h-3.5" />
+            <span>Franchise Wholesale</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+              {franchiseApplications.length}
             </span>
           </button>
 
@@ -802,6 +817,121 @@ export const SupervisorDashboard: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: FRANCHISE WHOLESALE HARDWARE PARTNERSHIP APPLICATIONS */}
+      {activeTab === 'franchise' && (
+        <div className="space-y-5">
+          <div className="bg-white border border-[#BAE6FD] rounded-card p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-mono font-bold text-[#16A34A] uppercase px-2 py-0.5 rounded bg-[#DCFCE7] border border-[#86EFAC]">
+                    Wholesale Procurement Pipeline
+                  </span>
+                  <span className="text-xs text-[#64748B] font-mono">Tier-1 Factory Direct Hardware POs</span>
+                </div>
+                <h2 className="text-xl font-bold text-[#0F172A] tracking-tight">
+                  Franchise Hub Partners & Bulk Charger Applications ({franchiseApplications.length})
+                </h2>
+                <p className="text-xs text-[#64748B] mt-1 font-sans max-w-2xl">
+                  Review commercial site applications. Approving an application authorizes the subsidized wholesale hardware package procurement from ABB/Schneider/Delta and queues grid connection compliance audit.
+                </p>
+              </div>
+
+              <div className="p-3 bg-[#F0F9FF] border border-[#BAE6FD] rounded-xl text-center font-mono">
+                <span className="text-[10px] text-[#64748B] block uppercase font-bold">Approved Franchisees</span>
+                <span className="text-xl font-bold text-[#0284C7] mt-0.5 block">
+                  {franchiseApplications.filter(a => a.status === 'approved').length}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {franchiseApplications.length === 0 ? (
+            <div className="bg-white border border-[#BAE6FD] rounded-card p-12 text-center text-xs text-[#64748B] font-mono shadow-sm">
+              Zero pending franchise applications.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {franchiseApplications.map(app => (
+                <div 
+                  key={app.id}
+                  className="bg-white border border-[#BAE6FD] rounded-card p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+                >
+                  <div className="space-y-3 flex-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="px-2.5 py-0.5 rounded bg-[#E0F2FE] text-[#0284C7] font-mono text-xs font-bold border border-[#BAE6FD]">
+                        {app.id}
+                      </span>
+                      <h3 className="text-lg font-bold text-[#0F172A]">{app.applicantName}</h3>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                        app.status === 'approved' 
+                          ? 'bg-[#DCFCE7] text-[#16A34A] border border-[#86EFAC]'
+                          : app.status === 'rejected'
+                          ? 'bg-[#FEE2E2] text-[#DC2626] border border-[#FCA5A5]'
+                          : 'bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]'
+                      }`}>
+                        {app.status === 'approved' ? 'WHOLESALE APPROVED' : app.status === 'rejected' ? 'REJECTED' : 'UNDER SUPERVISOR AUDIT'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono text-[#64748B]">
+                      <div>
+                        <span className="block text-[10px] text-[#94A3B8]">CITY / CORRIDOR</span>
+                        <span className="text-[#0F172A] font-bold">{app.city}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-[#94A3B8]">PACKAGE TYPE</span>
+                        <span className="text-[#0284C7] font-bold capitalize">{app.packageType} Hub Bundle</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-[#94A3B8]">WHOLESALE INVESTMENT</span>
+                        <span className="text-[#16A34A] font-bold">{formatCurrency(app.estimatedInvestment)}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-[#94A3B8]">SANCTIONED POWER</span>
+                        <span className="text-[#0F172A] font-medium">{app.powerSanctionKw} kW ({app.landType} land)</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-[#475569] font-sans bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0]">
+                      <strong>Site Notes:</strong> {app.locationAddress}. {app.notes}
+                    </p>
+                    <p className="text-[11px] text-[#64748B] font-mono">
+                      Contact: {app.phone} • {app.email} • Submitted: {app.createdAt}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex sm:flex-col items-stretch gap-2 shrink-0 font-mono">
+                    {app.status !== 'approved' && (
+                      <button
+                        type="button"
+                        onClick={() => updateFranchiseStatus(app.id, 'approved')}
+                        className="px-4 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Approve Wholesale PO</span>
+                      </button>
+                    )}
+
+                    {app.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        onClick={() => updateFranchiseStatus(app.id, 'rejected')}
+                        className="px-4 py-2.5 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#E11D48] text-[#E11D48] hover:bg-[#FFF1F2] text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>Decline Application</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

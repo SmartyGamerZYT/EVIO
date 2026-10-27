@@ -5,16 +5,20 @@ import { LiveMap } from '../Map/LiveMap';
 import { DiscoveryFilters, FilterState } from './DiscoveryFilters';
 import { ChargerCard } from './ChargerCard';
 import { ChargerDetailModal } from './ChargerDetailModal';
-import { Database, PlusCircle, AlertCircle } from 'lucide-react';
+import { Database, PlusCircle, AlertCircle, Truck, Repeat, Radio } from 'lucide-react';
 
 interface DriverViewProps {
   onOpenActiveSession: () => void;
   onNavigateToBookings?: () => void;
+  onOpenBatteryDelivery?: () => void;
+  onOpenV2V?: () => void;
 }
 
 export const DriverView: React.FC<DriverViewProps> = ({ 
   onOpenActiveSession,
   onNavigateToBookings,
+  onOpenBatteryDelivery,
+  onOpenV2V,
 }) => {
   const { chargers, loadSeedChargers, userCoords, setUserCoords } = useApp();
 
@@ -117,6 +121,53 @@ export const DriverView: React.FC<DriverViewProps> = ({
   return (
     <div className="space-y-5">
       
+      {/* Quick SOS & Battery Services Banner */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div 
+          onClick={onOpenBatteryDelivery}
+          className="bg-white border border-[#BAE6FD] hover:border-[#0284C7] p-3.5 rounded-xl shadow-xs flex items-center justify-between cursor-pointer transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#E0F2FE] border border-[#BAE6FD] flex items-center justify-center text-[#0284C7] group-hover:bg-[#0284C7] group-hover:text-white transition-all">
+              <Truck className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-mono font-bold text-[#0F172A] block group-hover:text-[#0284C7]">
+                Doorstep Swappable Battery Delivery
+              </span>
+              <span className="text-[11px] text-[#64748B] font-mono">
+                Nearest hub delivers fresh 100% battery pack (~18 mins)
+              </span>
+            </div>
+          </div>
+          <span className="text-xs font-mono font-bold text-[#0284C7] group-hover:translate-x-1 transition-transform">
+            Order &rarr;
+          </span>
+        </div>
+
+        <div 
+          onClick={onOpenV2V}
+          className="bg-white border border-[#FECDD3] hover:border-[#E11D48] p-3.5 rounded-xl shadow-xs flex items-center justify-between cursor-pointer transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#FFF1F2] border border-[#FECDD3] flex items-center justify-center text-[#E11D48] group-hover:bg-[#E11D48] group-hover:text-white transition-all">
+              <Repeat className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-mono font-bold text-[#0F172A] block group-hover:text-[#E11D48]">
+                Highway V2V Reverse Charge SOS
+              </span>
+              <span className="text-[11px] text-[#64748B] font-mono">
+                Stranded on highway? Request charge from passing EVs
+              </span>
+            </div>
+          </div>
+          <span className="text-xs font-mono font-bold text-[#E11D48] group-hover:translate-x-1 transition-transform">
+            Request &rarr;
+          </span>
+        </div>
+      </div>
+
       {/* Discovery Filters Bar */}
       <DiscoveryFilters
         filters={filters}

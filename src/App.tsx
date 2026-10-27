@@ -12,6 +12,9 @@ import { WalletModal } from './components/Common/WalletModal';
 import { ReceiptModal } from './components/Common/ReceiptModal';
 import { ChatDrawer } from './components/Common/ChatDrawer';
 import { AIAssistantDrawer } from './components/Common/AIAssistantDrawer';
+import { BatteryDeliveryModal } from './components/Driver/BatteryDeliveryModal';
+import { FranchiseModal } from './components/Franchise/FranchiseModal';
+import { V2VReverseChargingModal } from './components/Driver/V2VReverseChargingModal';
 import { Zap, ShieldCheck } from 'lucide-react';
 
 const MainApp: React.FC = () => {
@@ -24,6 +27,9 @@ const MainApp: React.FC = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showChatDrawer, setShowChatDrawer] = useState(false);
   const [showAIDrawer, setShowAIDrawer] = useState(false);
+  const [showBatteryDeliveryModal, setShowBatteryDeliveryModal] = useState(false);
+  const [showFranchiseModal, setShowFranchiseModal] = useState(false);
+  const [showV2VModal, setShowV2VModal] = useState(false);
 
   // Automatically sync initial tab when logging into specific role dashboard
   React.useEffect(() => {
@@ -54,6 +60,9 @@ const MainApp: React.FC = () => {
         onOpenChat={() => setShowChatDrawer(true)}
         onOpenActiveSession={() => setShowActiveSession(true)}
         onOpenAI={() => setShowAIDrawer(true)}
+        onOpenBatteryDelivery={() => setShowBatteryDeliveryModal(true)}
+        onOpenV2V={() => setShowV2VModal(true)}
+        onOpenFranchise={() => setShowFranchiseModal(true)}
       />
 
       {/* Main Body View */}
@@ -72,6 +81,8 @@ const MainApp: React.FC = () => {
               <DriverView 
                 onOpenActiveSession={() => setShowActiveSession(true)} 
                 onNavigateToBookings={() => setCurrentTab('bookings')}
+                onOpenBatteryDelivery={() => setShowBatteryDeliveryModal(true)}
+                onOpenV2V={() => setShowV2VModal(true)}
               />
             )}
           </>
@@ -81,6 +92,7 @@ const MainApp: React.FC = () => {
         {role === 'hub' && (
           <HostDashboard
             onOpenListingWizard={() => setShowListingWizard(true)}
+            onOpenFranchise={() => setShowFranchiseModal(true)}
           />
         )}
 
@@ -130,6 +142,24 @@ const MainApp: React.FC = () => {
       {showAIDrawer && (
         <AIAssistantDrawer
           onClose={() => setShowAIDrawer(false)}
+        />
+      )}
+
+      {showBatteryDeliveryModal && (
+        <BatteryDeliveryModal
+          onClose={() => setShowBatteryDeliveryModal(false)}
+        />
+      )}
+
+      {showFranchiseModal && (
+        <FranchiseModal
+          onClose={() => setShowFranchiseModal(false)}
+        />
+      )}
+
+      {showV2VModal && (
+        <V2VReverseChargingModal
+          onClose={() => setShowV2VModal(false)}
         />
       )}
 
