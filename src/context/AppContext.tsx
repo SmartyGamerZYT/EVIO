@@ -362,6 +362,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Open Charge Map real-time public stations integration using API Key
   useEffect(() => {
     let isMounted = true;
+    
+    // Fetch around user's active coordinates
     fetchOpenChargeMapStations(userCoords[0], userCoords[1], 50).then(ocmStations => {
       if (!isMounted || ocmStations.length === 0) return;
       setChargers(prev => {
@@ -373,6 +375,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return merged;
       });
     }).catch(err => console.warn('Open Charge Map sync warning:', err));
+
+    // Also query active Indian corridor (Pune - Mumbai expressway corridor)
+    fetchOpenChargeMapStations(18.5204, 73.8567, 75).then(ocmStations => {
+      if (!isMounted || ocmStations.length === 0) return;
+      setChargers(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const newStations = ocmStations.filter(s => !existingIds.has(s.id));
+        if (newStations.length === 0) return prev;
+        const merged = [...prev, ...newStations];
+        localStorage.setItem('evio_chargers', JSON.stringify(merged));
+        return merged;
+      });
+    }).catch(err => console.warn('Open Charge Map India sync warning:', err));
 
     return () => {
       isMounted = false;

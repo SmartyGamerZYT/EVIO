@@ -15,12 +15,13 @@ import { AIAssistantDrawer } from './components/Common/AIAssistantDrawer';
 import { BatteryDeliveryModal } from './components/Driver/BatteryDeliveryModal';
 import { FranchiseModal } from './components/Franchise/FranchiseModal';
 import { V2VReverseChargingModal } from './components/Driver/V2VReverseChargingModal';
+import { JourneyPredictionView } from './components/Driver/JourneyPredictionView';
 import { Zap, ShieldCheck } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const { currentUser, role } = useApp();
 
-  const [currentTab, setCurrentTab] = useState<'driver' | 'bookings' | 'host' | 'admin'>('driver');
+  const [currentTab, setCurrentTab] = useState<'driver' | 'bookings' | 'host' | 'admin' | 'journey'>('driver');
   const [showListingWizard, setShowListingWizard] = useState(false);
   const [showActiveSession, setShowActiveSession] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -34,7 +35,7 @@ const MainApp: React.FC = () => {
   // Automatically sync initial tab when logging into specific role dashboard
   React.useEffect(() => {
     if (role === 'driver') {
-      if (currentTab !== 'driver' && currentTab !== 'bookings') {
+      if (currentTab !== 'driver' && currentTab !== 'bookings' && currentTab !== 'journey') {
         setCurrentTab('driver');
       }
     } else if (role === 'hub') {
@@ -77,6 +78,8 @@ const MainApp: React.FC = () => {
                 onOpenReceipt={() => setShowReceiptModal(true)}
                 onOpenChat={() => setShowChatDrawer(true)}
               />
+            ) : currentTab === 'journey' ? (
+              <JourneyPredictionView />
             ) : (
               <DriverView 
                 onOpenActiveSession={() => setShowActiveSession(true)} 

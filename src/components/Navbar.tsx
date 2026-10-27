@@ -17,13 +17,14 @@ import {
   Truck,
   Building2,
   Repeat,
-  Radio
+  Radio,
+  Navigation
 } from 'lucide-react';
 import { useApp, Currency } from '../context/AppContext';
 
 interface NavbarProps {
-  currentTab: 'driver' | 'bookings' | 'host' | 'admin';
-  setCurrentTab: (tab: 'driver' | 'bookings' | 'host' | 'admin') => void;
+  currentTab: 'driver' | 'bookings' | 'host' | 'admin' | 'journey';
+  setCurrentTab: (tab: 'driver' | 'bookings' | 'host' | 'admin' | 'journey') => void;
   onOpenWallet: () => void;
   onOpenChat: () => void;
   onOpenActiveSession: () => void;
@@ -102,6 +103,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
 
                 <button
+                  onClick={() => setCurrentTab('journey')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    currentTab === 'journey' 
+                      ? 'bg-[#0284C7] text-white shadow-sm font-bold' 
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-white'
+                  }`}
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>Journey Prediction</span>
+                </button>
+
+                <button
                   onClick={() => setCurrentTab('bookings')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     currentTab === 'bookings' 
@@ -140,35 +153,41 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right side controls */}
         <div className="flex items-center gap-2">
 
-          {/* Battery Delivery Button */}
-          <button
-            onClick={onOpenBatteryDelivery}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#0284C7] text-xs font-mono font-bold text-[#0F172A] hover:text-[#0284C7] transition-all shadow-xs"
-            title="Order Swappable Battery Delivery"
-          >
-            <Truck className="w-3.5 h-3.5 text-[#0284C7]" />
-            <span className="hidden lg:inline">Battery Delivery</span>
-          </button>
+          {/* Battery Delivery Button (Driver Only) */}
+          {role === 'driver' && (
+            <button
+              onClick={onOpenBatteryDelivery}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#CBD5E1] hover:border-[#0284C7] text-xs font-mono font-bold text-[#0F172A] hover:text-[#0284C7] transition-all shadow-xs"
+              title="Order Swappable Battery Delivery"
+            >
+              <Truck className="w-3.5 h-3.5 text-[#0284C7]" />
+              <span className="hidden lg:inline">Battery Delivery</span>
+            </button>
+          )}
 
-          {/* V2V Highway Reverse Charge SOS */}
-          <button
-            onClick={onOpenV2V}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#FECDD3] hover:border-[#E11D48] text-xs font-mono font-bold text-[#E11D48] hover:bg-[#FFF1F2] transition-all shadow-xs"
-            title="P2P V2V Highway Reverse Charge SOS"
-          >
-            <Repeat className="w-3.5 h-3.5 text-[#E11D48]" />
-            <span className="hidden lg:inline">V2V SOS</span>
-          </button>
+          {/* V2V Highway Reverse Charge SOS (Driver Only) */}
+          {role === 'driver' && (
+            <button
+              onClick={onOpenV2V}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#FECDD3] hover:border-[#E11D48] text-xs font-mono font-bold text-[#E11D48] hover:bg-[#FFF1F2] transition-all shadow-xs"
+              title="P2P V2V Highway Reverse Charge SOS"
+            >
+              <Repeat className="w-3.5 h-3.5 text-[#E11D48]" />
+              <span className="hidden lg:inline">V2V SOS</span>
+            </button>
+          )}
 
-          {/* Hub Franchise Partner */}
-          <button
-            onClick={onOpenFranchise}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#F0FDF4] border border-[#86EFAC] hover:border-[#16A34A] text-xs font-mono font-bold text-[#16A34A] transition-all shadow-xs"
-            title="Setup Hub Franchise with Bulk Wholesale Chargers"
-          >
-            <Building2 className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span className="hidden md:inline">Franchise</span>
-          </button>
+          {/* Hub Franchise Partner (Driver & Hub only - Strictly hidden for Supervisor) */}
+          {role !== 'supervisor' && (
+            <button
+              onClick={onOpenFranchise}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#F0FDF4] border border-[#86EFAC] hover:border-[#16A34A] text-xs font-mono font-bold text-[#16A34A] transition-all shadow-xs"
+              title="Setup Hub Franchise with Bulk Wholesale Chargers"
+            >
+              <Building2 className="w-3.5 h-3.5 text-[#16A34A]" />
+              <span className="hidden md:inline">Franchise</span>
+            </button>
+          )}
 
           {/* AI Telemetry Assistant */}
           <button
@@ -344,6 +363,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <MapPin className="w-4 h-4" />
               <span>Map</span>
+            </button>
+            <button
+              onClick={() => setCurrentTab('journey')}
+              className={`flex flex-col items-center gap-1 ${currentTab === 'journey' ? 'text-[#0284C7] font-bold' : 'text-[#64748B]'}`}
+            >
+              <Navigation className="w-4 h-4" />
+              <span>Journey</span>
             </button>
             <button
               onClick={() => setCurrentTab('bookings')}

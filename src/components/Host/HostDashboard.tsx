@@ -22,7 +22,9 @@ import {
   Truck,
   Building2,
   BatteryCharging,
-  Package
+  Package,
+  ZapOff,
+  Activity
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ChargerListing, Booking } from '../../types';
@@ -69,28 +71,37 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
     b.status === 'requested' && myChargers.some(c => c.id === b.chargerId)
   );
 
-  const chartDataWeekly = [
-    { label: 'Mon', kwh: 34, earnings: 9.52 },
-    { label: 'Tue', kwh: 48, earnings: 13.44 },
-    { label: 'Wed', kwh: 42, earnings: 11.76 },
-    { label: 'Thu', kwh: 68, earnings: 19.04 },
-    { label: 'Fri', kwh: 92, earnings: 25.76 },
-    { label: 'Sat', kwh: 115, earnings: 32.20 },
-    { label: 'Sun', kwh: 88, earnings: 24.64 },
-  ];
+  // Relevant bookings for this host's chargers
+  const myChargerIds = new Set(myChargers.map(c => c.id));
+  const hostBookings = bookings.filter(b => myChargerIds.has(b.chargerId));
+  const activeOrDoneBookings = hostBookings.filter(b => b.status === 'confirmed' || b.status === 'active');
 
   const totalCapacityKw = myChargers.reduce((sum, c) => sum + c.powerKw, 0);
   const liveCount = myChargers.filter(c => c.listingStatus === 'live').length;
   const pendingCount = myChargers.filter(c => c.listingStatus === 'pending').length;
 
-  const totalEarnings = bookings
-    .filter(b => myChargers.some(c => c.id === b.chargerId))
-    .reduce((sum, b) => sum + (b.totalAmount - b.platformFee), 0) + (myChargers.length > 0 ? 320.5 : 0);
+  // Real data calculations - strictly 0 if no chargers listed
+  const totalEarnings = myChargers.length === 0 ? 0 : activeOrDoneBookings.reduce((sum, b) => sum + (b.totalAmount - b.platformFee), 0);
+  const totalSessions = myChargers.length === 0 ? 0 : activeOrDoneBookings.length;
+  const totalKwh = myChargers.length === 0 ? 0 : activeOrDoneBookings.reduce((sum, b) => sum + (b.activeSession?.currentKwh || b.estimatedKwh || 0), 0);
 
-  const totalSessions = bookings.filter(b => myChargers.some(c => c.id === b.chargerId)).length + (myChargers.length > 0 ? 28 : 0);
-  const totalKwh = bookings
-    .filter(b => myChargers.some(c => c.id === b.chargerId))
-    .reduce((sum, b) => sum + b.estimatedKwh, 0) + (myChargers.length > 0 ? 487 : 0);
+  // Dynamic daily telemetry aggregation
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const chartDataWeekly = dayNames.map(label => ({ label, kwh: 0, earnings: 0 }));
+
+  if (myChargers.length > 0) {
+    activeOrDoneBookings.forEach(b => {
+      const d = new Date(b.startTime || b.createdAt);
+      const dayIdx = (d.getDay() + 6) % 7;
+      const kwh = b.activeSession?.currentKwh || b.estimatedKwh || 0;
+      const earn = b.totalAmount - b.platformFee;
+      chartDataWeekly[dayIdx].kwh += Math.round(kwh * 10) / 10;
+      chartDataWeekly[dayIdx].earnings += Math.round(earn * 10) / 10;
+    });
+  }
+
+  const maxChartKwh = Math.max(...chartDataWeekly.map(d => d.kwh), 10);
+  const peakDay = chartDataWeekly.reduce((max, d) => d.kwh > max.kwh ? d : max, chartDataWeekly[0]);
 
   return (
     <div className="space-y-6 font-sans">
@@ -193,7 +204,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
         <div className="bg-white border border-[#BAE6FD] rounded-card p-5 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between text-[#64748B] text-xs font-mono font-bold mb-2">
             <span>NET EARNINGS</span>
-            <span className="text-[#16A34A] font-mono">+14.2%</span>
+            <span className="text-[#16A34A] font-mono">{myChargers.length === 0 ? '0%' : '+14.2%'}</span>
           </div>
           <div className="font-mono text-[30px] font-bold text-[#0F172A] tracking-tight">
             {formatCurrency(totalEarnings)}
@@ -435,90 +446,83 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onOpenListingWizar
               </div>
             </div>
 
-            {/* SVG Chart */}
-            <div className="w-full h-56 pt-2">
-              <svg viewBox="0 0 700 220" className="w-full h-full overflow-visible">
-                <defs>
-                  <linearGradient id="areaGradientLight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0284C7" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
+            {/* SVG Chart or Empty State */}
+            {myChargers.length === 0 ? (
+              <div className="w-full h-56 flex flex-col items-center justify-center border-2 border-dashed border-[#CBD5E1] rounded-2xl bg-[#F8FAFC] p-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-[#E0F2FE] border border-[#BAE6FD] flex items-center justify-center text-[#0284C7] mb-2.5">
+                  <ZapOff className="w-6 h-6 text-[#0284C7]" />
+                </div>
+                <h4 className="text-sm font-bold text-[#0F172A] font-mono">No Charging Nodes Connected</h4>
+                <p className="text-xs text-[#64748B] max-w-md mt-1 font-sans">
+                  You have not added any charging stations yet. Real-time electrical telemetry (kWh) and power delivery graphs will stream here once your node is listed and drivers book sessions.
+                </p>
+                <button
+                  onClick={onOpenListingWizard}
+                  className="mt-3.5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold font-mono transition-all shadow-sm"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Add New Charger
+                </button>
+              </div>
+            ) : (
+              <div className="w-full h-56 pt-2">
+                <svg viewBox="0 0 700 220" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="areaGradientLight" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0284C7" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-                {/* Grid guidelines */}
-                <line x1="0" y1="40" x2="700" y2="40" stroke="#E2E8F0" strokeDasharray="3,3" />
-                <line x1="0" y1="100" x2="700" y2="100" stroke="#E2E8F0" strokeDasharray="3,3" />
-                <line x1="0" y1="160" x2="700" y2="160" stroke="#E2E8F0" strokeDasharray="3,3" />
+                  {/* Grid guidelines */}
+                  <line x1="0" y1="40" x2="700" y2="40" stroke="#E2E8F0" strokeDasharray="3,3" />
+                  <line x1="0" y1="100" x2="700" y2="100" stroke="#E2E8F0" strokeDasharray="3,3" />
+                  <line x1="0" y1="160" x2="700" y2="160" stroke="#E2E8F0" strokeDasharray="3,3" />
 
-                {/* Area Path */}
-                <polygon
-                  points="
-                    0,220
-                    0,180
-                    116,145
-                    233,160
-                    350,110
-                    466,75
-                    583,30
-                    700,55
-                    700,220
-                  "
-                  fill="url(#areaGradientLight)"
-                />
+                  {/* Area Path */}
+                  <polygon
+                    points={`0,220 ${chartDataWeekly.map((d, i) => `${i * 116.6},${Math.round(200 - (d.kwh / maxChartKwh) * 150)}`).join(' ')} 700,220`}
+                    fill="url(#areaGradientLight)"
+                  />
 
-                {/* Line Path */}
-                <polyline
-                  fill="none"
-                  stroke="#0284C7"
-                  strokeWidth="3"
-                  points="
-                    0,180
-                    116,145
-                    233,160
-                    350,110
-                    466,75
-                    583,30
-                    700,55
-                  "
-                />
-
-                {/* Data Points */}
-                {[
-                  { cx: 0, cy: 180 },
-                  { cx: 116, cy: 145 },
-                  { cx: 233, cy: 160 },
-                  { cx: 350, cy: 110 },
-                  { cx: 466, cy: 75 },
-                  { cx: 583, cy: 30 },
-                  { cx: 700, cy: 55 },
-                ].map((pt, idx) => (
-                  <circle
-                    key={idx}
-                    cx={pt.cx}
-                    cy={pt.cy}
-                    r="4.5"
-                    fill="#FFFFFF"
+                  {/* Line Path */}
+                  <polyline
+                    fill="none"
                     stroke="#0284C7"
                     strokeWidth="3"
+                    points={chartDataWeekly.map((d, i) => `${i * 116.6},${Math.round(200 - (d.kwh / maxChartKwh) * 150)}`).join(' ')}
                   />
-                ))}
-              </svg>
 
-              {/* X Axis */}
-              <div className="flex justify-between text-[11px] font-mono text-[#64748B] pt-2 px-1">
-                {chartDataWeekly.map(d => (
-                  <div key={d.label} className="text-center">
-                    <div>{d.label}</div>
-                    <div className="text-[10px] text-[#0F172A] font-bold">{d.kwh} kWh</div>
-                  </div>
-                ))}
+                  {/* Data Points */}
+                  {chartDataWeekly.map((d, idx) => (
+                    <circle
+                      key={idx}
+                      cx={idx * 116.6}
+                      cy={Math.round(200 - (d.kwh / maxChartKwh) * 150)}
+                      r="4.5"
+                      fill="#FFFFFF"
+                      stroke="#0284C7"
+                      strokeWidth="3"
+                    />
+                  ))}
+                </svg>
+
+                {/* X Axis */}
+                <div className="flex justify-between text-[11px] font-mono text-[#64748B] pt-2 px-1">
+                  {chartDataWeekly.map(d => (
+                    <div key={d.label} className="text-center">
+                      <div>{d.label}</div>
+                      <div className="text-[10px] text-[#0F172A] font-bold">{d.kwh} kWh</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-[#E2E8F0] flex flex-wrap items-center justify-between text-xs font-mono text-[#64748B]">
-            <span>Peak delivery window: <strong className="text-[#0F172A]">Saturday (115 kWh)</strong></span>
-            <span>Est. upcoming payout: <strong className="text-[#16A34A]">{formatCurrency(145.0)}</strong></span>
+            <span>Peak delivery window: <strong className="text-[#0F172A]">{myChargers.length === 0 ? 'None (0 kWh)' : `${peakDay.label} (${peakDay.kwh} kWh)`}</strong></span>
+            <span>Est. upcoming payout: <strong className="text-[#16A34A]">{formatCurrency(totalEarnings * 0.9)}</strong></span>
           </div>
         </div>
 
